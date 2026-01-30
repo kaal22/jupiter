@@ -4,6 +4,12 @@ Privacy-centric, local-first AI companion for Ubuntu Desktop. All inference and 
 
 ## All-in-one install (Ubuntu Desktop)
 
+**Prerequisite:** Install `curl` if needed (required to download the installer):
+
+```bash
+sudo apt install curl
+```
+
 **One-line install (new user, fresh Ubuntu):**
 
 ```bash
