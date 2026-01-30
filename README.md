@@ -10,6 +10,9 @@ Privacy-centric, local-first AI companion for Ubuntu Desktop. All inference and 
 curl -sSL https://raw.githubusercontent.com/kaal22/jupiter/main/install.sh | bash
 ```
 
+If you see `git: command not found`, your shell may have an old cached script. Run with cache-bust:  
+`curl -sSL "https://raw.githubusercontent.com/kaal22/jupiter/main/install.sh?t=$(date +%s)" | bash`
+
 This downloads `install.sh` from the repo and clones [github.com/kaal22/jupiter](https://github.com/kaal22/jupiter) to install everything (deps, Ollama, model, Jupiter, systemd).
 
 **From repo (if they already cloned):**
