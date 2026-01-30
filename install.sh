@@ -28,8 +28,27 @@ log() { echo "[Jupiter] $*"; }
 warn() { echo "[Jupiter] WARNING: $*" >&2; }
 die() { echo "[Jupiter] ERROR: $*" >&2; exit 1; }
 
+# When cloning, we need git (and curl) before anything else
+ensure_git() {
+  if command -v git &>/dev/null; then
+    return 0
+  fi
+  log "Installing git (required to clone Jupiter)..."
+  if command -v apt-get &>/dev/null; then
+    sudo apt-get update -qq
+    sudo apt-get install -y -qq git ca-certificates curl --no-install-recommends
+  elif command -v dnf &>/dev/null; then
+    sudo dnf install -y -q git ca-certificates curl
+  elif command -v yum &>/dev/null; then
+    sudo yum install -y -q git ca-certificates curl
+  else
+    die "git not found. Please install git and run again."
+  fi
+}
+
 # ─── Config ─────────────────────────────────────────────────────────────────
 if [ -n "$CLONE_URL" ]; then
+  ensure_git
   CLONE_DIR="${TMPDIR:-/tmp}/jupiter-install-$$"
   log "Cloning Jupiter from $CLONE_URL into $CLONE_DIR..."
   git clone --depth 1 "$CLONE_URL" "$CLONE_DIR"
