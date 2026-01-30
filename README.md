@@ -43,7 +43,13 @@ The installer will:
 - Status: `jupiter status`
 - Audit log: `jupiter audit`
 
-If you see **`jupiter: command not found`**, the installer now adds `~/.local/bin` to your shell config; run `source ~/.bashrc` or open a new terminal.
+If you see **`jupiter: command not found`**, run `source ~/.bashrc` or open a new terminal.
+
+If you see **`ModuleNotFoundError: No module named 'jupiter'`** (after an older install), the editable install pointed at a removed temp dir. Fix it by reinstalling from the permanent copy:
+```bash
+~/.local/share/jupiter/venv/bin/pip install -e ~/.local/share/jupiter-install
+```
+Then run `jupiter chat` again.
 
 ## Manual / development
 

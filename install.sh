@@ -49,6 +49,11 @@ ensure_git() {
 }
 
 # ─── Config ─────────────────────────────────────────────────────────────────
+JUPITER_INSTALL="${JUPITER_INSTALL:-$HOME/.local/share/jupiter-install}"
+JUPITER_VENV="${JUPITER_VENV:-$HOME/.local/share/jupiter/venv}"
+JUPITER_BIN="$HOME/.local/bin"
+OLLAMA_INSTALL_URL="${OLLAMA_INSTALL_URL:-https://ollama.com/install.sh}"
+
 if [ -n "$CLONE_URL" ]; then
   ensure_git
   GIT_CMD="$(command -v git 2>/dev/null || echo /usr/bin/git)"
@@ -56,17 +61,16 @@ if [ -n "$CLONE_URL" ]; then
     die "git not found after install. Try: sudo apt-get install git && run again."
   fi
   CLONE_DIR="${TMPDIR:-/tmp}/jupiter-install-$$"
-  log "Cloning Jupiter from $CLONE_URL into $CLONE_DIR..."
+  log "Cloning Jupiter from $CLONE_URL..."
   "$GIT_CMD" clone --depth 1 "$CLONE_URL" "$CLONE_DIR"
-  INSTALL_SRC="$CLONE_DIR"
-  trap "rm -rf '$CLONE_DIR'" EXIT
+  log "Copying to $JUPITER_INSTALL (permanent)..."
+  mkdir -p "$(dirname "$JUPITER_INSTALL")"
+  rsync -a --exclude='.venv' --exclude='.git' "$CLONE_DIR/" "$JUPITER_INSTALL/" 2>/dev/null || cp -a "$CLONE_DIR" "$JUPITER_INSTALL"
+  rm -rf "$CLONE_DIR"
+  INSTALL_SRC="$JUPITER_INSTALL"
 else
   INSTALL_SRC="${JUPITER_INSTALL_SRC:-$SCRIPT_DIR}"
 fi
-JUPITER_INSTALL="${JUPITER_INSTALL:-$HOME/.local/share/jupiter-install}"
-JUPITER_VENV="${JUPITER_VENV:-$HOME/.local/share/jupiter/venv}"
-JUPITER_BIN="$HOME/.local/bin"
-OLLAMA_INSTALL_URL="${OLLAMA_INSTALL_URL:-https://ollama.com/install.sh}"
 
 # ─── Ubuntu / apt ───────────────────────────────────────────────────────────
 check_ubuntu() {
@@ -179,16 +183,19 @@ pull_ollama_model() {
 
 # ─── Copy install tree for first-boot ───────────────────────────────────────
 copy_install_tree() {
-  log "Copying Jupiter tree to $JUPITER_INSTALL (for first-boot and provisioning)..."
-  mkdir -p "$(dirname "$JUPITER_INSTALL")"
-  rsync -a --exclude='.venv' --exclude='.git' --exclude='__pycache__' --exclude='*.egg-info' \
-    "$INSTALL_SRC/" "$JUPITER_INSTALL/" 2>/dev/null || {
-    cp -a "$INSTALL_SRC" "$JUPITER_INSTALL"
-    rm -rf "$JUPITER_INSTALL/.venv" "$JUPITER_INSTALL/.git" 2>/dev/null || true
-  }
+  if [ "$(cd "$INSTALL_SRC" 2>/dev/null && pwd)" = "$(cd "$JUPITER_INSTALL" 2>/dev/null && pwd)" ]; then
+    log "Install tree already at $JUPITER_INSTALL."
+  else
+    log "Copying Jupiter tree to $JUPITER_INSTALL (for first-boot and provisioning)..."
+    mkdir -p "$(dirname "$JUPITER_INSTALL")"
+    rsync -a --exclude='.venv' --exclude='.git' --exclude='__pycache__' --exclude='*.egg-info' \
+      "$INSTALL_SRC/" "$JUPITER_INSTALL/" 2>/dev/null || {
+      cp -a "$INSTALL_SRC" "$JUPITER_INSTALL"
+      rm -rf "$JUPITER_INSTALL/.venv" "$JUPITER_INSTALL/.git" 2>/dev/null || true
+    }
+  fi
   chmod +x "$JUPITER_INSTALL/scripts/firstboot.sh" 2>/dev/null || true
   chmod +x "$JUPITER_INSTALL/provisioning/hardware_detect.py" "$JUPITER_INSTALL/provisioning/model_policy.py" 2>/dev/null || true
-  log "Install tree copied."
 }
 
 # ─── Systemd user units ──────────────────────────────────────────────────────
