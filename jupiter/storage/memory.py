@@ -65,6 +65,13 @@ class MemoryStore:
 
     def get_context_for_agent(self, session_limit: int = 30, episodic_limit: int = 10):
         parts = []
+        prefs = {}
+        for key in ("model", "editor", "theme", "speed_quality"):
+            v = self.preference_get(key)
+            if v is not None:
+                prefs[key] = v
+        if prefs:
+            parts.append("User preferences: " + json.dumps(prefs))
         for e in self.episodic_get_recent(episodic_limit):
             parts.append("Past: " + e["summary"])
         for m in self.session_get_recent(session_limit):

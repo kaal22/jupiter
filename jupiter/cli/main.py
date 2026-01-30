@@ -7,16 +7,22 @@ from jupiter.config import API_HOST, API_PORT, ensure_dirs
 
 JUPITER_API_URL = f"http://{API_HOST}:{API_PORT}"
 
-@click.group()
+
+@click.group(invoke_without_command=True)
+@click.pass_context
 @click.version_option(version=__version__)
-def cli():
-    """Jupiter OS — local AI assistant. All data stays on your machine."""
+def cli(ctx):
+    """Jupiter OS — local AI assistant. Just run 'jupiter' and ask anything.
+    You can say 'what's my system status?', 'show audit log', or chat. No need to remember commands."""
     ensure_dirs()
+    if ctx.invoked_subcommand is None:
+        ctx.invoke(chat)
+
 
 @cli.command()
 @click.option("--api-url", default=JUPITER_API_URL, envvar="JUPITER_API_URL")
 def chat(api_url: str):
-    """Interactive chat with Jupiter."""
+    """Start Jupiter and ask in plain language (default when you run 'jupiter')."""
     try:
         r = httpx.get(f"{api_url.rstrip('/')}/health", timeout=2.0)
         if r.status_code == 200:
@@ -28,7 +34,7 @@ def chat(api_url: str):
 
 def _chat_via_api(api_url: str):
     url = f"{api_url.rstrip('/')}/chat"
-    click.echo("Jupiter (local API). Type a message and press Enter. Ctrl+D or 'exit' to quit.")
+    click.echo("Jupiter — ask anything (e.g. 'what's my system status?', 'list files here', 'show audit log'). Type your question and Enter. Ctrl+D or 'exit' to quit.")
     while True:
         try:
             line = click.prompt("You", default="", show_default=False)
@@ -49,7 +55,7 @@ def _chat_local():
     from jupiter.safety.broker import SafetyBroker
     from jupiter.storage.memory import MemoryStore
     from jupiter.storage.audit import AuditStore
-    click.echo("Jupiter (local). Type a message and press Enter. Ctrl+D or 'exit' to quit.")
+    click.echo("Jupiter — ask anything (e.g. 'what's my system status?', 'list files here', 'show audit log'). Type your question and Enter. Ctrl+D or 'exit' to quit.")
     memory = MemoryStore()
     audit = AuditStore()
     broker = SafetyBroker(audit=audit)
@@ -64,7 +70,7 @@ def _chat_local():
         user_message = line.strip()
         memory.session_append("user", user_message)
         plan = planner.plan(user_message)
-        output = execute_plan(plan, broker)
+        output = execute_plan(plan, broker, memory)
         memory.session_append("assistant", output)
         click.echo("Jupiter: " + output)
 

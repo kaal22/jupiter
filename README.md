@@ -43,11 +43,9 @@ The installer will:
 
 **After install**
 
-- Run once (or open a new terminal): **`source ~/.bashrc`** — then `jupiter` will be found.
-- Or use the full path: **`~/.local/share/jupiter/venv/bin/jupiter chat`**
-- Chat: `jupiter chat`
-- Status: `jupiter status`
-- Audit log: `jupiter audit`
+- Run once (or open a new terminal): **`source ~/.bashrc`** — then run **`jupiter`**.
+- Just run **`jupiter`** and ask in plain language. Examples: “what’s my system status?”, “list files in this folder”, “show recent audit log”. The AI figures out what to do; no need to remember subcommands.
+- Optional: `jupiter status` (config/health), `jupiter audit` (audit log).
 
 If you see **`jupiter: command not found`**, run `source ~/.bashrc` or open a new terminal.
 
@@ -55,7 +53,7 @@ If you see **`ModuleNotFoundError: No module named 'jupiter'`** (after an older 
 ```bash
 ~/.local/share/jupiter/venv/bin/pip install -e ~/.local/share/jupiter-install
 ```
-Then run `jupiter chat` again.
+Then run `jupiter` again.
 
 ## Manual / development
 
@@ -64,7 +62,7 @@ cd Jupiter
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt && pip install -e .
 jupiter status
-jupiter chat
+jupiter
 ```
 
 ## Architecture
@@ -75,6 +73,20 @@ jupiter chat
 - **Tool Safety Broker** — Permissions, confirmations, audit
 - **Memory & Audit** — SQLite (local only)
 - **Base** — Ubuntu Desktop 24.04+ (GNOME, systemd)
+
+## Context, memory, and capabilities
+
+**Local database:** All memory is stored in SQLite under `~/.local/share/jupiter/` (no cloud).
+
+- **Session** — Current conversation; recent messages are sent to the model so it keeps context.
+- **Episodic** — Summaries/facts you ask Jupiter to remember (e.g. “remember that I use vim”); these are included in future context.
+- **Preferences** — Stored key/value (e.g. editor, theme); included in context so the AI knows your preferences.
+
+**How the AI learns:** When you say “remember that …” or “save that”, Jupiter can store a preference (`remember_preference`) or a short summary (`remember_summary`). It only stores when you ask; nothing is remembered without consent.
+
+**System awareness:** The AI is given the host OS, hostname, and machine type so it suggests correct commands (e.g. `apt` on Ubuntu, `dnf` on Fedora). It runs as your user (no sudo).
+
+**Executing commands and reading output:** Jupiter can run shell commands and return their stdout/stderr via the `terminal_exec` tool. For read-only commands (e.g. `ls`, `cat`, `grep`) it can run them directly; for commands that change state it asks for confirmation first. All tool use is logged in the local audit store.
 
 ## Requirements
 

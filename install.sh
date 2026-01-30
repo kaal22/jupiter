@@ -240,7 +240,7 @@ install_cli_symlink() {
   fi
   if ! echo "$PATH" | grep -q "$JUPITER_BIN"; then
     add_local_bin_to_path
-    log "Run: source ~/.bashrc   (or open a new terminal) then try: jupiter chat"
+    log "Run: source ~/.bashrc   (or open a new terminal) then run: jupiter"
   fi
 }
 
@@ -285,8 +285,8 @@ main() {
   echo "════════════════════════════════════════════════════════════"
   echo ""
   echo "  • Run once (or open a new terminal):  source ~/.bashrc"
-  echo "  • Then:  jupiter chat   or  jupiter status"
-  echo "  • Or use full path:  $JUPITER_VENV/bin/jupiter chat"
+  echo "  • Then run:  jupiter   (ask anything; no need to remember commands)"
+  echo "  • Or full path:  $JUPITER_VENV/bin/jupiter"
   echo ""
 }
 

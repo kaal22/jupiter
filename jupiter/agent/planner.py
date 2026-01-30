@@ -4,6 +4,7 @@ import httpx
 from typing import Optional
 from jupiter.config import OLLAMA_BASE_URL, DEFAULT_MODEL
 from jupiter.storage.memory import MemoryStore
+from jupiter.prompt import get_system_info, build_system_prompt
 
 
 class JupiterPlanner:
@@ -11,6 +12,7 @@ class JupiterPlanner:
         self.base_url = base_url.rstrip("/")
         self.model = model or DEFAULT_MODEL
         self.memory = memory or MemoryStore()
+        self._system_prompt = build_system_prompt(get_system_info())
 
     def _chat(self, messages: list) -> str:
         with httpx.Client(timeout=120.0) as client:
@@ -20,13 +22,9 @@ class JupiterPlanner:
 
     def plan(self, user_message: str) -> dict:
         context = self.memory.get_context_for_agent(session_limit=20, episodic_limit=5)
-        system = """You are Jupiter, a local AI assistant. Reply with a single JSON object:
-- To reply: {"action": "reply", "content": "your text"}
-- To use a tool: {"action": "tool", "tool": "tool_name", "args": {...}, "confirmed": true/false}
-Tools: system_status, system_logs_tail, system_diagnostics, terminal_explain, terminal_exec.
-Set confirmed only if the user explicitly agreed to the action."""
         prompt = (context + "\n\nUser: " + user_message) if context else user_message
-        response = self._chat([{"role": "user", "content": system + "\n\nUser: " + prompt}])
+        full_user = self._system_prompt + "\n\n---\nConversation context:\n" + prompt
+        response = self._chat([{"role": "user", "content": full_user}])
         json_str = response.strip()
         for start in ("```json", "```"):
             if start in json_str:

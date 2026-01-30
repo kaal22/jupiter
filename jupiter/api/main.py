@@ -37,7 +37,7 @@ async def chat(body: ChatIn):
     broker = get_broker()
     memory.session_append("user", body.message)
     plan = planner.plan(body.message)
-    output = execute_plan(plan, broker)
+    output = execute_plan(plan, broker, memory)
     memory.session_append("assistant", output)
     return ChatOut(reply=output)
 
