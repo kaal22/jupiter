@@ -207,6 +207,24 @@ install_systemd_units() {
 }
 
 # ─── CLI in PATH ─────────────────────────────────────────────────────────────
+add_local_bin_to_path() {
+  local path_line="export PATH=\"\$HOME/.local/bin:\$PATH\""
+  for rc in "$HOME/.bashrc" "$HOME/.profile" "$HOME/.zshrc"; do
+    [ -f "$rc" ] || continue
+    if grep -q '.local/bin' "$rc" 2>/dev/null; then
+      return 0
+    fi
+    echo "" >> "$rc"
+    echo "# Jupiter CLI" >> "$rc"
+    echo "$path_line" >> "$rc"
+    log "Added ~/.local/bin to PATH in $rc"
+    return 0
+  done
+  # No rc file found, create .bashrc
+  echo "$path_line" >> "$HOME/.bashrc"
+  log "Created ~/.bashrc with ~/.local/bin in PATH"
+}
+
 install_cli_symlink() {
   mkdir -p "$JUPITER_BIN"
   if [ -f "$JUPITER_VENV/bin/jupiter" ]; then
@@ -214,8 +232,8 @@ install_cli_symlink() {
     log "Installed 'jupiter' command at $JUPITER_BIN/jupiter"
   fi
   if ! echo "$PATH" | grep -q "$JUPITER_BIN"; then
-    warn "Add $JUPITER_BIN to your PATH:"
-    echo "  echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc && source ~/.bashrc"
+    add_local_bin_to_path
+    log "Run: source ~/.bashrc   (or open a new terminal) then try: jupiter chat"
   fi
 }
 
@@ -259,12 +277,9 @@ main() {
   echo "  Jupiter OS installed successfully"
   echo "════════════════════════════════════════════════════════════"
   echo ""
-  echo "  • CLI:    jupiter chat   (or: $JUPITER_VENV/bin/jupiter chat)"
-  echo "  • Status: jupiter status"
-  echo "  • Agent:  runs as user service (jupiter-agent.service)"
-  echo ""
-  echo "  If 'jupiter' is not found, add to PATH:"
-  echo "    export PATH=\"\$HOME/.local/bin:\$PATH\""
+  echo "  • Run once (or open a new terminal):  source ~/.bashrc"
+  echo "  • Then:  jupiter chat   or  jupiter status"
+  echo "  • Or use full path:  $JUPITER_VENV/bin/jupiter chat"
   echo ""
 }
 

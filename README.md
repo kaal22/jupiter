@@ -37,11 +37,13 @@ The installer will:
 
 **After install**
 
-- Ensure `~/.local/bin` is in your PATH:  
-  `echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc`
+- Run once (or open a new terminal): **`source ~/.bashrc`** — then `jupiter` will be found.
+- Or use the full path: **`~/.local/share/jupiter/venv/bin/jupiter chat`**
 - Chat: `jupiter chat`
 - Status: `jupiter status`
 - Audit log: `jupiter audit`
+
+If you see **`jupiter: command not found`**, the installer now adds `~/.local/bin` to your shell config; run `source ~/.bashrc` or open a new terminal.
 
 ## Manual / development
 
