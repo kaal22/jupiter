@@ -1,0 +1,14 @@
+[Unit]
+Description=Jupiter OS first-boot provisioning (runs once)
+After=default.target
+ConditionPathExists=!%h/.local/share/jupiter/.provisioned
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'JUPITER_INSTALL=%h/.local/share/jupiter-install; [ -x "$JUPITER_INSTALL/scripts/firstboot.sh" ] && exec "$JUPITER_INSTALL/scripts/firstboot.sh"; exit 0'
+Environment=HOME=%h
+Environment=USER=%u
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target

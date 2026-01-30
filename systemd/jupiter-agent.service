@@ -1,0 +1,17 @@
+[Unit]
+Description=Jupiter OS Agent Daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/bin/bash -c '. %h/.local/share/jupiter/venv/bin/activate && exec python -m jupiter.agent.daemon'
+Restart=on-failure
+RestartSec=5
+Environment=HOME=%h
+Environment=USER=%u
+Environment=XDG_DATA_HOME=%h/.local/share
+Environment=XDG_CONFIG_HOME=%h/.config
+
+[Install]
+WantedBy=default.target

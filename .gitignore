@@ -1,0 +1,26 @@
+# Virtual env and install artifacts
+.venv/
+venv/
+*.egg-info/
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+build/
+dist/
+*.egg
+
+# Jupiter user data (local)
+.local/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*~
+
+# Optional
+*.db
+.env
+.env.local
