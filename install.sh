@@ -44,14 +44,20 @@ ensure_git() {
   else
     die "git not found. Please install git and run again."
   fi
+  # Ensure this shell sees git (PATH may be minimal when run via curl)
+  export PATH="/usr/bin:/usr/local/bin:$PATH"
 }
 
 # ─── Config ─────────────────────────────────────────────────────────────────
 if [ -n "$CLONE_URL" ]; then
   ensure_git
+  GIT_CMD="$(command -v git 2>/dev/null || echo /usr/bin/git)"
+  if [ ! -x "$GIT_CMD" ]; then
+    die "git not found after install. Try: sudo apt-get install git && run again."
+  fi
   CLONE_DIR="${TMPDIR:-/tmp}/jupiter-install-$$"
   log "Cloning Jupiter from $CLONE_URL into $CLONE_DIR..."
-  git clone --depth 1 "$CLONE_URL" "$CLONE_DIR"
+  "$GIT_CMD" clone --depth 1 "$CLONE_URL" "$CLONE_DIR"
   INSTALL_SRC="$CLONE_DIR"
   trap "rm -rf '$CLONE_DIR'" EXIT
 else
