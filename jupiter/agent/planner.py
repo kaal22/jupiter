@@ -2,7 +2,7 @@
 import json
 import httpx
 from typing import Optional
-from jupiter.config import OLLAMA_BASE_URL, DEFAULT_MODEL
+from jupiter.config import OLLAMA_BASE_URL, OLLAMA_CHAT_TIMEOUT, DEFAULT_MODEL
 from jupiter.storage.memory import MemoryStore
 from jupiter.prompt import get_system_info, build_system_prompt
 
@@ -15,7 +15,7 @@ class JupiterPlanner:
         self._system_prompt = build_system_prompt(get_system_info())
 
     def _chat(self, messages: list) -> str:
-        with httpx.Client(timeout=120.0) as client:
+        with httpx.Client(timeout=OLLAMA_CHAT_TIMEOUT) as client:
             r = client.post(f"{self.base_url}/api/chat", json={"model": self.model, "messages": messages, "stream": False})
             r.raise_for_status()
             return (r.json().get("message") or {}).get("content", "")

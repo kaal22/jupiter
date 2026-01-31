@@ -12,6 +12,7 @@ JUPITER_STATE = XDG_STATE / "jupiter"
 DB_PATH = JUPITER_DATA / "jupiter.db"
 AUDIT_DB_PATH = JUPITER_DATA / "audit.db"
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
+OLLAMA_CHAT_TIMEOUT = float(os.environ.get("JUPITER_OLLAMA_CHAT_TIMEOUT", "600"))  # seconds; 10 min default for slow CPU-only
 API_HOST = "127.0.0.1"
 API_PORT = int(os.environ.get("JUPITER_API_PORT", "8765"))
 

@@ -3,7 +3,7 @@ import sys
 import click
 import httpx
 from jupiter import __version__
-from jupiter.config import API_HOST, API_PORT, ensure_dirs
+from jupiter.config import API_HOST, API_PORT, OLLAMA_CHAT_TIMEOUT, ensure_dirs
 
 JUPITER_API_URL = f"http://{API_HOST}:{API_PORT}"
 
@@ -43,7 +43,7 @@ def _chat_via_api(api_url: str):
         if not line or line.strip().lower() in ("exit", "quit", "q"):
             break
         try:
-            r = httpx.post(url, json={"message": line.strip()}, timeout=60.0)
+            r = httpx.post(url, json={"message": line.strip()}, timeout=OLLAMA_CHAT_TIMEOUT)
             r.raise_for_status()
             click.echo("Jupiter: " + r.json().get("reply", ""))
         except Exception as e:
