@@ -28,16 +28,36 @@ def get_network_context() -> str:
             if os.path.exists("/sbin/ip"): ip_cmd = "/sbin/ip"
             elif os.path.exists("/usr/sbin/ip"): ip_cmd = "/usr/sbin/ip"
 
-        # Get brief IP info
-        cmd = [ip_cmd, "-4", "-o", "addr", "show", "up"]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode == 0:
-            lines = [l.strip() for l in result.stdout.splitlines() if "lo" not in l] # skip loopback
-            ctx = "\n".join(lines[:3])
+        # unique list of IPs
+        ips = []
+
+        # Method 1: hostname -I (Simplest)
+        try:
+            res = subprocess.run(["hostname", "-I"], capture_output=True, text=True)
+            if res.returncode == 0:
+                for ip in res.stdout.split():
+                    ips.append(f"IP: {ip}")
+        except: pass
+
+        # Method 2: ip command (More detailed)
+        try:
+            cmd = [ip_cmd, "-4", "-o", "addr", "show", "up"]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                lines = [l.strip() for l in result.stdout.splitlines() if "lo" not in l]
+                if lines: ips.extend(lines[:2])
+            else:
+                print(f"[DEBUG] ip cmd failed: {result.stderr}")
+        except Exception as e:
+            print(f"[DEBUG] ip cmd error: {e}")
+
+        if ips:
+            ctx = "\n".join(ips[:4])
             print(f"[DEBUG] Network Context:\n{ctx}")
             return ctx
+            
     except Exception as e:
-        print(f"[DEBUG] Network Context Error: {e}")
+        print(f"[DEBUG] General Network Error: {e}")
         pass
     return "Unknown (check manually)"
 
