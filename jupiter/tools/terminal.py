@@ -29,9 +29,33 @@ def terminal_exec(command: str, timeout_seconds: int = 120) -> ToolResult:
     if not command or not command.strip():
         return ToolResult(success=False, output="", error="Empty command")
     try:
-        r = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=timeout_seconds)
+        # Pass input="" to ensure we don't hang on stdin prompts (like sudo password)
+        # This causes sudo to fail immediately instead of hanging
+        r = subprocess.run(
+            command, 
+            shell=True, 
+            capture_output=True, 
+            text=True, 
+            input="", 
+            timeout=timeout_seconds
+        )
         out = (r.stdout or "") + (r.stderr or "")
-        return ToolResult(success=r.returncode == 0, output=out[:8192], error=None if r.returncode == 0 else f"Exit code {r.returncode}", audit_action="terminal_exec")
+        
+        # Detect sudo failure explicitly
+        if "sudo: a password is required" in out or "sudo: no tty present" in out:
+            return ToolResult(
+                success=False, 
+                output=out, 
+                error="Command requires sudo password (cannot run interactively). Please run manually in terminal.", 
+                audit_action="terminal_exec_sudo_fail"
+            )
+            
+        return ToolResult(
+            success=r.returncode == 0, 
+            output=out[:8192], 
+            error=None if r.returncode == 0 else f"Exit code {r.returncode}\n{out}", 
+            audit_action="terminal_exec"
+        )
     except subprocess.TimeoutExpired:
         return ToolResult(success=False, output="", error=f"Command timed out after {timeout_seconds}s", audit_action="terminal_exec_timeout")
     except Exception as e:
