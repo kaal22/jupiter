@@ -32,7 +32,7 @@
 - [x] Implement "Futuristic Hacker UI" (Electric Blue, Grid, Terminal).
 - [x] Add real-time WebSocket for terminal streaming (via xterm.js + PTY).
 - [x] Display Scan Results & Exploit Status (via HTMX Polling for Targets/Logs).
-- [ ] Add `jupiter dashboard` CLI command.
+- [x] Add `jupiter dashboard` CLI command.
 
 ## Phase 7: Long-Term Memory (PLANNED)
 - [ ] Persistent Memory across sessions (vector store).
