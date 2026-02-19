@@ -1,7 +1,8 @@
-"""Intelligence layer for Jupiter V2 Shell."""
 import httpx
 import json
 import shutil
+import subprocess
+import os
 from typing import Optional, Tuple
 from jupiter.config import OLLAMA_BASE_URL, DEFAULT_MODEL, OLLAMA_CHAT_TIMEOUT
 
@@ -18,18 +19,25 @@ RULES:
 6. Do not include markdown code blocks. Just raw JSON.
 """
 
-import subprocess
-
 def get_network_context() -> str:
     """Get active network interfaces and IPs."""
     try:
+        # Try finding ip command
+        ip_cmd = "ip"
+        if shutil.which("ip") is None:
+            if os.path.exists("/sbin/ip"): ip_cmd = "/sbin/ip"
+            elif os.path.exists("/usr/sbin/ip"): ip_cmd = "/usr/sbin/ip"
+
         # Get brief IP info
-        cmd = ["ip", "-4", "-o", "addr", "show", "up"]
+        cmd = [ip_cmd, "-4", "-o", "addr", "show", "up"]
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode == 0:
             lines = [l.strip() for l in result.stdout.splitlines() if "lo" not in l] # skip loopback
-            return "\n".join(lines[:3]) # Limit to 3 interfaces
-    except Exception:
+            ctx = "\n".join(lines[:3])
+            print(f"[DEBUG] Network Context:\n{ctx}")
+            return ctx
+    except Exception as e:
+        print(f"[DEBUG] Network Context Error: {e}")
         pass
     return "Unknown (check manually)"
 
