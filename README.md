@@ -55,7 +55,30 @@ Jupiter will:
 3. Decide the next step (e.g., specific service scan).
 4. Report the findings.
 
-### 3. Classic Agent Mode
+### 3. Trust Mode (`/trust`)
+
+Tired of confirming every command? Enable **Trust Mode** for the current session.
+
+```bash
+jupiter:~$ /trust
+> Trust Mode: ENABLED (No confirmations)
+```
+
+Now, `jupiter` (and `/auto`) will execute commands immediately without asking. Use with caution!
+
+### 4. Deep Context Awareness
+
+Jupiter now sees what you see:
+- **Files**: It knows which files are in your current directory.
+- **Network**: It knows your IP/Subnet.
+
+Example: If you have a `requirements.txt` in your folder:
+```bash
+jupiter:~$ install the python deps
+> Suggested: pip install -r requirements.txt
+```
+
+### 5. Classic Agent Mode
 
 You can also run valid one-off tasks from your standard terminal:
 

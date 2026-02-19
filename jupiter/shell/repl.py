@@ -79,18 +79,28 @@ def repl_loop():
             # Explicit AI trigger
             if text.startswith("?") or text.startswith("/"):
                 query = text[1:].strip()
+                # Handle /trust command
+                if text.strip() == "/trust":
+                    if session:
+                        val = not getattr(session, "trust_mode", False)
+                        setattr(session, "trust_mode", val)
+                        print(f"Trust Mode: {'ENABLED (No confirmations)' if val else 'DISABLED'}")
+                    else:
+                        print("Trust mode not available in basic shell mode.")
+                    continue
+                
+                # Handle /auto
+                if text.startswith("/auto"):
+                    goal = text[5:].strip()
+                    if goal:
+                        output = process_auto_command(session, goal)
+                        print("\n[AGENT REPORT]\n" + output)
+                    else:
+                        print("Usage: /auto <goal>")
+                    continue
+                
                 if query:
                     process_ai_command(session, query)
-                continue
-
-            # Check for /auto automation
-            if text.startswith("/auto"):
-                goal = text[5:].strip()
-                if goal:
-                    output = process_auto_command(session, goal)
-                    print("\n[AGENT REPORT]\n" + output)
-                else:
-                    print("Usage: /auto <goal>")
                 continue
 
             parts = shlex.split(text)
@@ -123,6 +133,10 @@ def repl_loop():
 def process_auto_command(session, goal: str) -> str:
     print(f"Starting Multi-Step Agent for goal: '{goal}'")
     
+    is_trusted = getattr(session, "trust_mode", False) if session else False
+    if is_trusted:
+        print("[Trust Mode ENABLED] bypassing confirmations.")
+
     # Initialize Agent components
     memory = MemoryStore()
     audit = AuditStore()
@@ -134,6 +148,10 @@ def process_auto_command(session, goal: str) -> str:
     )
 
     def shell_confirm(msg: str) -> bool:
+        if getattr(session, "trust_mode", False) if session else False:
+            print(f"[Auto-Confirm] {msg} -> YES")
+            return True
+            
         if session:
             ans = session.prompt(f"\n[CONFIRM] {msg} (y/n): ")
         else:
@@ -165,6 +183,11 @@ def process_ai_command(session, query):
         print(f"  Reason: {explanation}")
         
         try:
+            if getattr(session, "trust_mode", False) if session else False:
+                print("[Auto-Confirm] Executing...")
+                run_system_command(cmd)
+                return
+
             if session:
                 ans = session.prompt(f"Execute? [Y/n] ")
             else:

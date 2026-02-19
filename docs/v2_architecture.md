@@ -39,9 +39,9 @@ A Python-based REPL (Read-Eval-Print Loop) using `python-prompt-toolkit`.
 - [x] Prompt: "Translate this request to a command."
 - [x] UX: User types "scan network" -> Jupiter prints `> sudo nmap -sn 192.168.1.0/24`. User hits Enter to confirm.
 
-### Phase 3: Autonomous Agents (IN PROGRESS)
+### Phase 3: Autonomous Agents (COMPLETED)
 - [x] `/auto <goal>`: Spawns the agent loop.
-- [ ] **Trust Mode**: `/trust` command to auto-approve all commands (sudo included) for the current session.
+- [x] **Trust Mode**: `/trust` command to auto-approve all commands (sudo included) for the current session.
 
 ## Comparison to V1
 | Feature | V1 (Current) | V2 (Native) |

@@ -61,21 +61,48 @@ def get_network_context() -> str:
         pass
     return "Unknown (check manually)"
 
+def get_directory_context() -> str:
+    """Get list of files in current directory to help AI infer context."""
+    try:
+        files = []
+        with os.scandir(".") as entries:
+            for entry in entries:
+                if not entry.name.startswith("."):
+                    kind = "DIR" if entry.is_dir() else "FILE"
+                    files.append(f"{kind}: {entry.name}")
+        
+        # Limit to 30 files to avoid context bloat
+        if len(files) > 30:
+            return "\n".join(files[:30]) + "\n... (more files)"
+        return "\n".join(files)
+    except Exception:
+        return "Unknown (check permissions)"
+
 def suggest_command(user_text: str) -> Tuple[Optional[str], str]:
     """
     Ask LLM to translate text to a command.
     Returns: (command, explanation)
     """
-    net_ctx = get_network_context()
+    try:
+        net_ctx = get_network_context()
+    except: net_ctx = "Unknown"
+    
+    try:
+        dir_ctx = get_directory_context()
+    except: dir_ctx = "Unknown"
     
     # Dynamic System Prompt
     prompt = f"""{SYSTEM_PROMPT}
 
 CONTEXT:
+Working Directory: {os.getcwd()}
+Files Present:
+{dir_ctx}
+
 Active Network Interfaces:
 {net_ctx}
 
-Use this context to determine the correct subnet or IP range if user asks to 'scan network'.
+Use this context to infer correct filenames (e.g. if user says 'run install', check if 'install.sh' exists).
 """
 
     messages = [

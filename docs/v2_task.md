@@ -13,10 +13,10 @@
 - [x] Auto-detect missing commands (exit 127) and invoke AI.
 - [x] Inject Network Context (`ip`, `hostname`) for accurate scanning.
 
-## Phase 3: Autonomy Loop (IN PROGRESS)
+## Phase 3: Autonomy Loop (COMPLETED)
 - [x] Implement `/auto <goal>` loop.
-- [ ] Implement `/trust` command to bypass confirmation for one session.
-- [ ] Implement deep context gathering: `ls` output fed back to LLM automatically.
+- [x] Implement `/trust` command to bypass confirmation for one session.
+- [x] Implement deep context gathering: `ls` output fed back to LLM automatically.
 
 ## Phase 4: Full System Integration (Kali) (COMPLETED)
 - [x] Install as `/usr/local/bin/jupiter`.
