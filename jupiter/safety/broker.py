@@ -14,6 +14,7 @@ class Scope(Enum):
     EMAIL_WRITE = "email.write"
     EXPLOIT_SEARCH = "exploit.search"
     EXPLOIT_EXEC = "exploit.exec"
+    NETWORK_SCAN = "network.scan"
 
 
 @dataclass

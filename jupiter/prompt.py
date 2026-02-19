@@ -43,6 +43,9 @@ To get system status (CPU/RAM/Disk):
 To read system logs:
 {{"action": "system_logs_tail", "args": {{"service": "optional", "lines": 20}}}}
 
+To scan a network (Nmap):
+{{"action": "network_scan", "args": {{"target": "192.168.1.1", "ports": "top-100"}}}}
+
 To search for exploits (SearchSploit):
 {{"action": "exploit_search", "args": {{"query": "apache 2.4"}}}}
 
@@ -50,6 +53,10 @@ To run Metasploit commands (stateful session):
 {{"action": "msf_exec", "args": {{"command": "use exploit/..."}}}}
 {{"action": "msf_exec", "args": {{"command": "set RHOSTS 1.2.3.4"}}}}
 {{"action": "msf_exec", "args": {{"command": "run"}}}}
+
+CRITICAL STRATEGY:
+1. If `network_scan` returns specific service versions (e.g., "vsftpd 2.3.4"), you MUST immediately run `exploit_search` for that version.
+2. If exploits are found, you may use `msf_exec` to verify them if authorized.
 
 To remember things:
 {{"action": "remember_preference", "args": {{"key": "editor", "value": "vim"}}}}

@@ -26,6 +26,6 @@
 - [x] Scaffold `jupiter/exploitation/` module structure.
 - [x] Implement basic exploit searching (e.g. `searchsploit` wrapper).
 - [x] Implement Metasploit Integration (via persistent `msfconsole` PTY wrapper).
-- [ ] Auto-suggest exploits based on Nmap service versions.
+- [x] Auto-suggest exploits based on Nmap service versions (via `network_scan` and prompt strategy).
 - [ ] Implement Web Interface Dashboard.
 - [ ] Persistent Memory across sessions (vector store).

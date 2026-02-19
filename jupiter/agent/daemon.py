@@ -9,6 +9,7 @@ from jupiter.agent.planner import JupiterPlanner
 from jupiter.tools.terminal import terminal_explain, terminal_exec, terminal_type
 from jupiter.tools.exploit import search_exploit
 from jupiter.tools.msf import msf_exec
+from jupiter.tools.nmap import scan_network
 
 MAX_AGENT_STEPS = 6
 
@@ -17,7 +18,7 @@ TOOL_ACTIONS = frozenset({
     "system_status", "system_logs_tail", "system_diagnostics",
     "terminal_explain", "terminal_exec",
     "remember_preference", "remember_summary", "audit_log",
-    "exploit_search", "msf_exec",
+    "exploit_search", "msf_exec", "network_scan",
 })
 
 
@@ -70,6 +71,7 @@ def execute_plan(plan: dict, broker: SafetyBroker, memory: MemoryStore, confirm_
             "terminal_type": (Scope.TERMINAL_EXEC, lambda: terminal_type(args.get("text", ""))),
             "exploit_search": (Scope.EXPLOIT_SEARCH, lambda: search_exploit(args.get("query", ""))),
             "msf_exec": (Scope.EXPLOIT_EXEC, lambda: msf_exec(args.get("command", ""))),
+            "network_scan": (Scope.NETWORK_SCAN, lambda: scan_network(args.get("target", "localhost"), args.get("ports", "top-100"), int(args.get("speed", 4)))),
         }
         
         if tool not in tool_map:

@@ -42,3 +42,8 @@ Try these commands:
     -   Should trigger `exploit_search`.
 2.  `/auto Launch Metasploit and use exploit/unix/ftp/vsftpd_234_backdoor`
     -   Should trigger `msf_exec`.
+
+3.  `/auto Scan 127.0.0.1 and find exploits`
+    -   Should trigger `network_scan`.
+    -   If services are found (e.g. SSH), it should FOLLOW UP with `exploit_search`.
+
