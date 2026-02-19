@@ -1,11 +1,8 @@
-"""Terminal tools — explain (read-only), exec."""
-import subprocess
-import sys
-import os
-import time
-import select
+"""Terminal tools — explain (read-only), exec (persistent shell), type (input)."""
+import re
 from typing import Optional
 from jupiter.safety.broker import ToolResult
+from jupiter.agent.shell import get_shell
 
 SAFE_READ_ONLY = frozenset({
     "cat", "head", "tail", "less", "grep", "ls", "pwd", "whoami", "date",
@@ -18,6 +15,10 @@ SAFE_READ_ONLY = frozenset({
     "md5sum", "sha256sum", "strings",
 })
 
+ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+
+def strip_ansi(text: str) -> str:
+    return ANSI_ESCAPE.sub('', text)
 
 def terminal_explain(command: str) -> ToolResult:
     cmd = command.strip().split()
@@ -25,113 +26,49 @@ def terminal_explain(command: str) -> ToolResult:
     note = "This is a common read-only command." if name in SAFE_READ_ONLY else "This command may modify system state. Confirm before executing."
     return ToolResult(success=True, output=f"Command: {command}\nNote: {note}")
 
-
 def terminal_exec(command: str, timeout_seconds: int = 120) -> ToolResult:
     if not command or not command.strip():
         return ToolResult(success=False, output="", error="Empty command")
 
-    # Try using PTY (Linux/Mac) for better terminal behavior
     try:
-        import pty
-        use_pty = True
-    except ImportError:
-        use_pty = False
-
-    if use_pty:
-        master, slave = pty.openpty()
-        try:
-            p = subprocess.Popen(
-                ["/bin/bash", "-c", command],
-                stdin=slave,
-                stdout=slave,
-                stderr=slave,
-                close_fds=True
-            )
-            os.close(slave)  # Close slave in parent so EOF works correctly
-            
-            output_buffer = []
-            start_time = time.time()
-            
-            while p.poll() is None:
-                # Check for timeout
-                if time.time() - start_time > timeout_seconds:
-                    p.terminate()
-                    return ToolResult(success=False, output="".join(output_buffer), error=f"Command timed out after {timeout_seconds}s", audit_action="terminal_exec_timeout")
-                
-                # Check for output on master fd
-                r, _, _ = select.select([master], [], [], 0.1)
-                if master in r:
-                    try:
-                        data = os.read(master, 1024)
-                        if data:
-                            chunk = data.decode('utf-8', errors='replace')
-                            output_buffer.append(chunk)
-                        else:
-                            break  # EOF
-                    except OSError:
-                        break
-            
-            # Process finished, confirm return code (wait a tiny bit just in case)
-            p.wait()
-            
-            # Read any remaining output
-            try:
-                # Non-blocking read until empty
-                while True:
-                    r, _, _ = select.select([master], [], [], 0)
-                    if master in r:
-                        data = os.read(master, 1024)
-                        if data:
-                            output_buffer.append(data.decode('utf-8', errors='replace'))
-                        else:
-                            break
-                    else:
-                        break
-            except OSError:
-                pass
-            
-            full_output = "".join(output_buffer)
-            # Check for sudo failure specific string if present in output
-            if "sudo: a password is required" in full_output:
-                return ToolResult(success=False, output=full_output, error="Command requires sudo password. Run manually.", audit_action="terminal_exec_sudo_fail")
-
+        shell = get_shell()
+        output = shell.exec(command, timeout=timeout_seconds)
+        
+        # Check for interactive prompt signal from shell
+        if output.startswith("INTERACTIVE_PROMPT_NEEDED:"):
             return ToolResult(
-                success=p.returncode == 0,
-                output=full_output[:8192],
-                error=None if p.returncode == 0 else f"Exit code {p.returncode}",
-                audit_action="terminal_exec"
+                success=False, 
+                output=output, 
+                error=f"Command requires interactive input (e.g. password). Use 'terminal_type' to provide it. prompt detected: {output}",
+                audit_action="terminal_exec_interactive"
             )
+        
+        clean_out = strip_ansi(output).strip()
+        return ToolResult(
+            success=True, 
+            output=clean_out[:16384],
+            error=None,
+            audit_action="terminal_exec"
+        )
             
-        except Exception as e:
-            return ToolResult(success=False, output="", error=f"PTY exec error: {str(e)}", audit_action="terminal_exec_error")
-        finally:
-            try:
-                os.close(master)
-            except OSError:
-                pass
+    except Exception as e:
+        return ToolResult(success=False, output="", error=f"Shell error: {str(e)}", audit_action="terminal_exec_error")
 
-    else:
-        # Fallback for Windows
-        try:
-            r = subprocess.run(
-                command, 
-                shell=True, 
-                capture_output=True, 
-                text=True, 
-                input="", 
-                timeout=timeout_seconds
-            )
-            out = (r.stdout or "") + (r.stderr or "")
-            if "sudo: a password is required" in out:
-                 return ToolResult(success=False, output=out, error="Command requires sudo password. Run manually.", audit_action="terminal_exec_sudo_fail")
-            
-            return ToolResult(
-                success=r.returncode == 0, 
-                output=out[:8192], 
-                error=None if r.returncode == 0 else f"Exit code {r.returncode}", 
-                audit_action="terminal_exec"
-            )
-        except subprocess.TimeoutExpired:
-             return ToolResult(success=False, output="", error=f"Command timed out after {timeout_seconds}s", audit_action="terminal_exec_timeout")
-        except Exception as e:
-             return ToolResult(success=False, output="", error=str(e), audit_action="terminal_exec_error")
+def terminal_type(text: str, timeout_seconds: int = 30) -> ToolResult:
+    """Type text into the running shell (e.g. for passwords/prompts)."""
+    try:
+        shell = get_shell()
+        # reusing exec logic: writes text+newline, waits for prompt
+        output = shell.exec(text, timeout=timeout_seconds)
+        
+        clean_out = strip_ansi(output).strip()
+        return ToolResult(
+            success=True, 
+            output=f"(Input sent) Output:\n{clean_out[:16384]}",
+            error=None,
+            audit_action="terminal_input_hidden" # Don't log content in audit action name, though args will be logged by broker if not careful? 
+            # Broker logs 'details'. We rely on SafetyBroker to handle sensitive args if needed, 
+            # or accept that local audit logs have it.
+        )
+    except Exception as e:
+        return ToolResult(success=False, output="", error=f"Shell error: {str(e)}", audit_action="terminal_input_error")

@@ -52,21 +52,32 @@ To store a fact (only when asked):
 {{"action": "remember_summary", "args": {{"summary": "one sentence"}}}}
 
 To show audit log:
-{{"action": "audit_log", "args": {{"limit": 20}}}}
+{{"action": "terminal_exec", "args": {{"command": "ls -la /var/log"}}}}
+(Returns output. Use for stateful commands like cd, export, ping, nmap.)
+
+To send input (e.g. passwords, y/n):
+{{"action": "terminal_type", "args": {{"text": "mypassword"}}}}
 
 CONFIRMATION: 
-1. Read-only commands (ls, cat, grep, ip, nmap, ps, df, find, ping, dig, netstat, ss, arp, who, id) -> set "confirmed": true.
-2. Destructive/Sudo commands -> set "confirmed": true ONLY if the user explicitly authorized it in the prompt.
-3. If a tool returns "Action requires explicit user confirmation", STOP. Reply to the user: "I need your permission to run: [command]. Is this okay?"
+1. Read-only commands -> confirmed: true.
+2. Destructive/Sudo commands -> confirmed: true ONLY if explicit user permission given in prompt.
+3. If tool returns "Action requires explicit user confirmation", STOP. Ask user.
 
-SUDO/ROOT: You run as a normal user. 
-1. Try running commands WITHOUT sudo first.
-2. If it fails with "permission denied", tell the user: "This requires root. Please run: sudo <command>"
+INTERACTIVE SHELL:
+- If a command returns "INTERACTIVE_PROMPT_NEEDED: [sudo] password for ...", it means the shell is waiting for input.
+- DO NOT just run the command again.
+- ONE: If you know the password (from memory/user), use "terminal_type" to send it.
+- TWO: If you don't know, reply to user: "I need the sudo password to proceed."
 
 EXAMPLE — user says "scan my network":
-Step 1: {{"action": "terminal_exec", "args": {{"command": "ip route"}}, "confirmed": true}}
-Step 2: {{"action": "terminal_exec", "args": {{"command": "nmap -sn 192.168.1.0/24"}}, "confirmed": true}}
+Step 1: {{"action": "terminal_exec", "args": {{"command": "sudo nmap -sn 192.168.1.0/24"}}, "confirmed": false}}
 (Result: "Action requires explicit user confirmation")
-Step 3: {{"action": "reply", "content": "I need to run a network scan. Is it okay if I run: nmap -sn 192.168.1.0/24?"}}
+Step 2: {{"action": "reply", "content": "I need permission to run sudo nmap..."}}
+(User says "yes")
+Step 3: {{"action": "terminal_exec", "args": {{"command": "sudo nmap -sn 192.168.1.0/24"}}, "confirmed": true}}
+(Result: "INTERACTIVE_PROMPT_NEEDED: [sudo] password for user:")
+Step 4: {{"action": "reply", "content": "I need your sudo password."}}
+(User says "secret123")
+Step 5: {{"action": "terminal_type", "args": {{"text": "secret123"}}, "confirmed": true}}
 
 ONLY output a single JSON object. No text, no markdown, no explanation."""

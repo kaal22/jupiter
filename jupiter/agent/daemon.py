@@ -7,7 +7,7 @@ from jupiter.storage.audit import AuditStore
 from jupiter.storage.memory import MemoryStore
 from jupiter.agent.planner import JupiterPlanner
 from jupiter.tools.system import system_status, system_logs_tail, system_diagnostics
-from jupiter.tools.terminal import terminal_explain, terminal_exec
+from jupiter.tools.terminal import terminal_explain, terminal_exec, terminal_type
 
 MAX_AGENT_STEPS = 6
 
@@ -65,6 +65,7 @@ def execute_plan(plan: dict, broker: SafetyBroker, memory: MemoryStore, confirm_
             "system_diagnostics": (Scope.SYSTEM_READ, lambda: system_diagnostics()),
             "terminal_explain": (Scope.TERMINAL_READ, lambda: terminal_explain(args.get("command", ""))),
             "terminal_exec": (Scope.TERMINAL_EXEC, lambda: terminal_exec(args.get("command", ""), args.get("timeout_seconds", 120))),
+            "terminal_type": (Scope.TERMINAL_EXEC, lambda: terminal_type(args.get("text", ""))),
         }
         
         if tool not in tool_map:
@@ -75,9 +76,6 @@ def execute_plan(plan: dict, broker: SafetyBroker, memory: MemoryStore, confirm_
 
     # First attempt
     result = run_tool_logic(initial_confirmed)
-    
-    # Debug confirmation flow
-    print(f"DEBUG: tool={tool} result_type={type(result)} success={getattr(result, 'success', 'N/A')} error='{getattr(result, 'error', 'N/A')}' has_callback={confirm_callback is not None}", file=sys.stderr)
     
     # Handle string confirmation request (memory tools)
     if isinstance(result, str):
@@ -94,7 +92,6 @@ def execute_plan(plan: dict, broker: SafetyBroker, memory: MemoryStore, confirm_
     if is_tool_result and not result.success and "confirmation" in (result.error or "").lower():
         if confirm_callback:
             cmd_preview = args.get("command", "") if tool == "terminal_exec" else str(args)
-            print(f"DEBUG: Triggering confirmation for {tool}", file=sys.stderr)
             if confirm_callback(f"Allow {tool}: {cmd_preview}"):
                 # Retry with confirmation
                 retry_result = run_tool_logic(True)
