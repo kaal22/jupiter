@@ -29,18 +29,18 @@ A Python-based REPL (Read-Eval-Print Loop) using `python-prompt-toolkit`.
 
 ## Implementation Steps
 
-### Phase 1: The Shell Wrapper (MVP)
-- [ ] Create `jupiter/shell/repl.py` using `prompt_toolkit`.
-- [ ] Implement command passthrough (system commands run raw).
-- [ ] Implement `cd` tracking (maintain `os.getcwd()` sync).
+### Phase 1: The Shell Wrapper (MVP) (COMPLETED)
+- [x] Create `jupiter/shell/repl.py` using `prompt_toolkit`.
+- [x] Implement command passthrough (system commands run raw).
+- [x] Implement `cd` tracking (maintain `os.getcwd()` sync).
 
-### Phase 2: The Brain
-- [ ] Connect `Ollama` / LLM to handling non-system commands.
-- [ ] Prompt: "Translate this request to a command."
-- [ ] UX: User types "scan network" -> Jupiter prints `> sudo nmap -sn 192.168.1.0/24`. User hits Enter to confirm.
+### Phase 2: The Brain (COMPLETED)
+- [x] Connect `Ollama` / LLM to handling non-system commands.
+- [x] Prompt: "Translate this request to a command."
+- [x] UX: User types "scan network" -> Jupiter prints `> sudo nmap -sn 192.168.1.0/24`. User hits Enter to confirm.
 
-### Phase 3: Autonomous Agents
-- [ ] `/auto <goal>`: Spawns the agent loop.
+### Phase 3: Autonomous Agents (IN PROGRESS)
+- [x] `/auto <goal>`: Spawns the agent loop.
 - [ ] **Trust Mode**: `/trust` command to auto-approve all commands (sudo included) for the current session.
 
 ## Comparison to V1
