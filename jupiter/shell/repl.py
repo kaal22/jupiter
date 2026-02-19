@@ -51,8 +51,46 @@ def run_system_command(text):
         print(f"Error: {e}")
         return 1
 
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich import box
+
+def print_welcome():
+    """Display welcome screen with commands."""
+    try:
+        console = Console()
+        
+        # Commands Table
+        table = Table(box=box.SIMPLE, show_header=True, header_style="bold magenta", expand=True)
+        table.add_column("Command", style="cyan", width=20)
+        table.add_column("Description", style="white")
+        table.add_column("Example", style="dim italic")
+
+        table.add_row("/auto <goal>", "Autonomous Task Agent", "Scan 192.168.1.5 and find bugs")
+        table.add_row("/trust", "Toggle Trust Mode", "Skip confirmations for this session")
+        table.add_row("network_scan", "Nmap Scanner", "network_scan('10.0.0.5')")
+        table.add_row("exploit_search", "SearchSploit", "exploit_search('vsftpd 2.3.4')")
+        table.add_row("msf_exec", "Metasploit Console", "msf_exec('use exploit/...')")
+        table.add_row("?", "AI Assistance", "? How do I scan port 80?")
+        table.add_row("exit", "Quit Shell", "")
+
+        panel = Panel(
+            table,
+            title="[bold cyan]Jupiter AI v2[/bold cyan] [green](Kali Edition)[/green]",
+            subtitle="[dim]Autonomous Penetration Testing Environment[/dim]",
+            border_style="blue",
+            padding=(1, 2),
+        )
+        console.print(panel)
+        console.print("[dim]Type natural language or commands below.[/dim]\n")
+    except ImportError:
+        print("Jupiter Native Shell (V2) - Type 'exit' to quit.")
+    except Exception as e:
+        print(f"Welcome screen error: {e}")
+
 def repl_loop():
-    print("Jupiter Native Shell (V2) - Type 'exit' to quit.")
+    print_welcome()
     try:
         session = PromptSession(
             history=FileHistory(get_history_file()),
