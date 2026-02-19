@@ -67,14 +67,21 @@ def _chat_local():
         if step == 1:
             click.echo("  [thinking...]")
         else:
-            click.echo("  [analyzing step " + str(step) + "...]")
+            click.echo("  [planning next step...]")
 
     def on_tool_start(step, tool, args):
         cmd = args.get("command", "") if isinstance(args, dict) else ""
         if cmd:
-            click.echo(f"  >> step {step}: running: {cmd}")
+            click.echo(f"  >> step {step}: {cmd}")
         else:
             click.echo(f"  >> step {step}: {tool}")
+
+    def on_tool_result(step, tool, result):
+        # Show truncated output so user can see what happened
+        preview = result.strip().replace('\n', ' | ')
+        if len(preview) > 200:
+            preview = preview[:200] + "..."
+        click.echo(f"  << {preview}")
 
     while True:
         try:
@@ -86,6 +93,7 @@ def _chat_local():
         output = agent_loop(
             line.strip(), planner, broker, memory,
             on_tool_start=on_tool_start,
+            on_tool_result=on_tool_result,
             on_thinking=on_thinking,
         )
         click.echo("Jupiter: " + output)

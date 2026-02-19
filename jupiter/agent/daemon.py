@@ -9,7 +9,7 @@ from jupiter.agent.planner import JupiterPlanner
 from jupiter.tools.system import system_status, system_logs_tail, system_diagnostics
 from jupiter.tools.terminal import terminal_explain, terminal_exec
 
-MAX_AGENT_STEPS = 10
+MAX_AGENT_STEPS = 6
 
 # All valid tool action names
 TOOL_ACTIONS = frozenset({
@@ -24,8 +24,7 @@ def execute_plan(plan: dict, broker: SafetyBroker, memory: MemoryStore) -> str:
     if action == "reply":
         return plan.get("content", "No reply generated.")
 
-    # Resolve tool name: supports both "action":"tool" + "tool":"name"
-    # and the simpler "action":"terminal_exec" format
+    # Resolve tool name
     if action == "tool":
         tool = plan.get("tool", "")
     elif action in TOOL_ACTIONS:
@@ -77,6 +76,15 @@ def execute_plan(plan: dict, broker: SafetyBroker, memory: MemoryStore) -> str:
     return result.error or result.output
 
 
+def _is_loop(observations: list) -> bool:
+    """Detect if the agent is stuck repeating the same action."""
+    if len(observations) < 2:
+        return False
+    last = observations[-1]
+    prev = observations[-2]
+    return last["tool"] == prev["tool"] and last["args"] == prev["args"]
+
+
 def agent_loop(
     user_message: str,
     planner: JupiterPlanner,
@@ -84,6 +92,7 @@ def agent_loop(
     memory: MemoryStore,
     max_steps: int = MAX_AGENT_STEPS,
     on_tool_start: Optional[Callable] = None,
+    on_tool_result: Optional[Callable] = None,
     on_thinking: Optional[Callable] = None,
 ) -> str:
     """ReAct agentic loop: plan -> execute -> observe -> repeat until reply."""
@@ -108,12 +117,24 @@ def agent_loop(
             if on_tool_start:
                 on_tool_start(step + 1, tool_name, tool_args)
             result = execute_plan(plan, broker, memory)
-            observations.append({
+            obs = {
                 "step": step + 1,
                 "tool": tool_name,
                 "args": tool_args,
                 "result": result[:4096],
-            })
+            }
+            observations.append(obs)
+            if on_tool_result:
+                on_tool_result(step + 1, tool_name, result)
+
+            # Loop detection: if same command repeated, stop and summarize
+            if _is_loop(observations):
+                parts = ["I ran into an issue (repeated command). Here's what I got:\n"]
+                for o in observations:
+                    parts.append(f"[{o['tool']}] {o['result'][:2000]}")
+                final = "\n\n".join(parts)
+                memory.session_append("assistant", final)
+                return final
             continue
 
         # Unknown
@@ -121,7 +142,7 @@ def agent_loop(
         memory.session_append("assistant", reply)
         return reply
 
-    # Max steps
+    # Max steps — compile results
     parts = ["Completed multiple steps:\n"]
     for obs in observations:
         parts.append(f"[{obs['tool']}] {obs['result'][:2000]}")
