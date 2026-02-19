@@ -1,0 +1,2 @@
+recursive-include jupiter/dashboard/templates *
+recursive-include jupiter/dashboard/static *
