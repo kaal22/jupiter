@@ -50,13 +50,15 @@ To search for exploits (SearchSploit):
 {{"action": "exploit_search", "args": {{"query": "apache 2.4"}}}}
 
 To run Metasploit commands (stateful session):
-{{"action": "msf_exec", "args": {{"command": "use exploit/..."}}}}
+{{"action": "msf_exec", "args": {{"command": "search vsftpd"}}}}
+{{"action": "msf_exec", "args": {{"command": "use exploit/unix/ftp/vsftpd_234_backdoor"}}}}
 {{"action": "msf_exec", "args": {{"command": "set RHOSTS 1.2.3.4"}}}}
 {{"action": "msf_exec", "args": {{"command": "run"}}}}
 
 CRITICAL STRATEGY:
-1. If `network_scan` returns specific service versions (e.g., "vsftpd 2.3.4"), you MUST immediately run `exploit_search` for that version.
-2. If exploits are found, you may use `msf_exec` to verify them if authorized.
+1. If `network_scan` returns versions, run `exploit_search` (ExploitDB).
+2. To find a runnable Metasploit module, use `msf_exec` with `search <service>`.
+3. Then `use` the best module and `run` it.
 
 To remember things:
 {{"action": "remember_preference", "args": {{"key": "editor", "value": "vim"}}}}
