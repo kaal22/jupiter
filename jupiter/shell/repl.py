@@ -62,11 +62,32 @@ def repl_loop():
             if not text.strip():
                 continue
                 
-            # Check for AI command (starts with / or natural language?)
-            # For V1 MVP, assume everything is system command unless /
-            
-            if text.startswith("/"):
-                print(f"AI Command: {text} (Not implemented yet)")
+            # Check for AI command (starts with / or ?)
+            if text.startswith("?") or text.startswith("/"):
+                from jupiter.shell.intelligence import suggest_command
+                
+                query = text[1:].strip()
+                if not query:
+                    print("Usage: ? <natural language request>")
+                    continue
+                    
+                print(f"Thinking about '{query}'...")
+                cmd, explanation = suggest_command(query)
+                
+                if cmd:
+                    print(f"\n> Suggested: {cmd}")
+                    print(f"  Reason: {explanation}")
+                    
+                    try:
+                        ans = session.prompt(f"Execute? [Y/n] ")
+                        if ans.lower() in ('', 'y', 'yes'):
+                            run_system_command(cmd)
+                        else:
+                            print("Cancelled.")
+                    except KeyboardInterrupt:
+                        print("Cancelled.")
+                else:
+                    print(f"AI could not suggest a command. {explanation}")
                 continue
 
             # Handle built-ins

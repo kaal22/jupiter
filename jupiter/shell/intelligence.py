@@ -1,0 +1,63 @@
+"""Intelligence layer for Jupiter V2 Shell."""
+import httpx
+import json
+import shutil
+from typing import Optional, Tuple
+from jupiter.config import OLLAMA_BASE_URL, DEFAULT_MODEL, OLLAMA_CHAT_TIMEOUT
+
+SYSTEM_PROMPT = """You are Jupiter Shell Assistant. 
+Your goal is to translate natural language requests into precise, safe, and effective shell commands for Kali Linux.
+Always prefer modern tools (nmap, ip, grep, fd, bat) over deprecated ones if possible.
+
+RULES:
+1. Output MUST be valid JSON: {"command": "...", "explanation": "..."}
+2. command: The exact single-line command to run.
+3. explanation: Brief reason for the command (max 10 words).
+4. If the request is unsafe or unclear, set command to empty string and explain why.
+5. Assume the user has sudo privileges if needed (preprint sudo).
+6. Do not include markdown code blocks. Just raw JSON.
+"""
+
+def suggest_command(user_text: str) -> Tuple[Optional[str], str]:
+    """
+    Ask LLM to translate text to a command.
+    Returns: (command, explanation)
+    """
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_text}
+    ]
+    
+    try:
+        with httpx.Client(timeout=OLLAMA_CHAT_TIMEOUT) as client:
+            resp = client.post(
+                f"{OLLAMA_BASE_URL}/api/chat",
+                json={
+                    "model": DEFAULT_MODEL,
+                    "messages": messages,
+                    "stream": False,
+                    "format": "json",
+                    "options": {"temperature": 0.2}
+                }
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            content = data.get("message", {}).get("content", "{}")
+            
+            try:
+                parsed = json.loads(content)
+                cmd = parsed.get("command", "").strip()
+                expl = parsed.get("explanation", "").strip()
+                return (cmd if cmd else None, expl)
+            except json.JSONDecodeError:
+                return (None, "Failed to parse AI response.")
+                
+    except Exception as e:
+        return (None, f"AI Error: {e}")
+
+def is_valid_command(cmd_plugin: str) -> bool:
+    """Check if the first word of the command exists in PATH or is a builtin."""
+    first_word = cmd_plugin.split()[0]
+    if first_word in ["cd", "exit", "history", "help", "clear"]:
+        return True
+    return shutil.which(first_word) is not None
