@@ -147,6 +147,15 @@ def status():
         click.echo("  Models: (Ollama not reachable)")
 
 
+@cli.command()
+def shell():
+    """Start Jupiter Native Shell (V2) - FULL TERMINAL INTEGRATION."""
+    try:
+        from jupiter.shell.repl import repl_loop
+        repl_loop()
+    except ImportError as e:
+        click.echo(f"Run 'pip install prompt_toolkit' first. Error: {e}", err=True)
+
 def main():
     cli()
 
