@@ -12,6 +12,9 @@ echo ">>> Installing dependencies via APT (safer)..."
 sudo apt update
 sudo apt install -y python3-prompt-toolkit python3-click python3-httpx python3-pip
 
+echo ">>> Force installing dependencies via PIP (to fix conflicts)..."
+sudo pip3 install --break-system-packages prompt_toolkit click httpx
+
 echo ">>> Installing Jupiter System-Wide (Bypassing PEP 668)..."
 # We use --break-system-packages because you requested NO VENV.
 # This installs jupiter directly into /usr/local/bin or similar.
