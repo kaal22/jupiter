@@ -156,6 +156,17 @@ def shell():
     except ImportError as e:
         click.echo(f"Run 'pip install prompt_toolkit' first. Error: {e}", err=True)
 
+@cli.command()
+@click.option("--host", default="127.0.0.1", help="Host to bind to.")
+@click.option("--port", default=8000, help="Port to bind to.")
+def dashboard(host, port):
+    """Launch the Futuristic Web Dashboard."""
+    try:
+        from jupiter.dashboard.app import run_dashboard
+        run_dashboard(host, port)
+    except ImportError as e:
+        click.echo(f"Missing dependencies: {e}. Run 'pip install fastapi uvicorn jinja2'")
+
 def main():
     cli()
 

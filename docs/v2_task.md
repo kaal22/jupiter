@@ -27,5 +27,12 @@
 - [x] Implement basic exploit searching (e.g. `searchsploit` wrapper).
 - [x] Implement Metasploit Integration (via persistent `msfconsole` PTY wrapper).
 - [x] Auto-suggest exploits based on Nmap service versions (via `network_scan` and prompt strategy).
-- [ ] Implement Web Interface Dashboard.
+## Phase 6: Web Dashboard (IN PROGRESS)
+- [x] Scaffold `jupiter/dashboard/` (FastAPI + Jinja2 + Tailwind).
+- [x] Implement "Futuristic Hacker UI" (Electric Blue, Grid, Terminal).
+- [ ] Add real-time WebSocket for terminal streaming.
+- [ ] Display Scan Results & Exploit Status.
+- [ ] Add `jupiter dashboard` CLI command.
+
+## Phase 7: Long-Term Memory (PLANNED)
 - [ ] Persistent Memory across sessions (vector store).
