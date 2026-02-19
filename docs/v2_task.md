@@ -30,7 +30,7 @@
 ## Phase 6: Web Dashboard (IN PROGRESS)
 - [x] Scaffold `jupiter/dashboard/` (FastAPI + Jinja2 + Tailwind).
 - [x] Implement "Futuristic Hacker UI" (Electric Blue, Grid, Terminal).
-- [ ] Add real-time WebSocket for terminal streaming.
+- [x] Add real-time WebSocket for terminal streaming (via xterm.js + PTY).
 - [ ] Display Scan Results & Exploit Status.
 - [ ] Add `jupiter dashboard` CLI command.
 

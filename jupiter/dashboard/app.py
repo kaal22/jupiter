@@ -1,11 +1,12 @@
-"""Jupiter Dashboard - Futuristic Web UI."""
 import os
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
+from jupiter.dashboard.terminal import TerminalManager
 
 app = FastAPI(title="Jupiter Dashboard")
+terminal_manager = TerminalManager()
 
 # Determine base path for templates/static
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -14,6 +15,10 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+@app.websocket("/ws/terminal")
+async def terminal_endpoint(websocket: WebSocket):
+    await terminal_manager.handle_websocket(websocket)
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
