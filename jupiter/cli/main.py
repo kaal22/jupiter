@@ -88,7 +88,12 @@ def _chat_local():
         click.echo(f"  << {preview}")
         
     def cli_confirm(msg: str) -> bool:
-        return click.confirm(f"  ⚠️ {msg}", default=False)
+        click.echo(f"\n  ⚠️ {msg} [y/N]: ", nl=False, err=True)
+        try:
+            ans = input().strip().lower()
+            return ans.startswith('y')
+        except (EOFError, KeyboardInterrupt):
+            return False
 
     while True:
         try:
