@@ -18,13 +18,40 @@ RULES:
 6. Do not include markdown code blocks. Just raw JSON.
 """
 
+import subprocess
+
+def get_network_context() -> str:
+    """Get active network interfaces and IPs."""
+    try:
+        # Get brief IP info
+        cmd = ["ip", "-4", "-o", "addr", "show", "up"]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode == 0:
+            lines = [l.strip() for l in result.stdout.splitlines() if "lo" not in l] # skip loopback
+            return "\n".join(lines[:3]) # Limit to 3 interfaces
+    except Exception:
+        pass
+    return "Unknown (check manually)"
+
 def suggest_command(user_text: str) -> Tuple[Optional[str], str]:
     """
     Ask LLM to translate text to a command.
     Returns: (command, explanation)
     """
+    net_ctx = get_network_context()
+    
+    # Dynamic System Prompt
+    prompt = f"""{SYSTEM_PROMPT}
+
+CONTEXT:
+Active Network Interfaces:
+{net_ctx}
+
+Use this context to determine the correct subnet or IP range if user asks to 'scan network'.
+"""
+
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": prompt},
         {"role": "user", "content": user_text}
     ]
     
