@@ -11,14 +11,28 @@ from jupiter.tools.terminal import terminal_explain, terminal_exec
 
 MAX_AGENT_STEPS = 10
 
+# All valid tool action names
+TOOL_ACTIONS = frozenset({
+    "system_status", "system_logs_tail", "system_diagnostics",
+    "terminal_explain", "terminal_exec",
+    "remember_preference", "remember_summary", "audit_log",
+})
+
 
 def execute_plan(plan: dict, broker: SafetyBroker, memory: MemoryStore) -> str:
     action = plan.get("action", "reply")
     if action == "reply":
         return plan.get("content", "No reply generated.")
-    if action != "tool":
-        return "Unknown action."
-    tool = plan.get("tool", "")
+
+    # Resolve tool name: supports both "action":"tool" + "tool":"name"
+    # and the simpler "action":"terminal_exec" format
+    if action == "tool":
+        tool = plan.get("tool", "")
+    elif action in TOOL_ACTIONS:
+        tool = action
+    else:
+        return f"Unknown action: {action}"
+
     args = plan.get("args") or {}
     confirmed = plan.get("confirmed", False)
 
@@ -70,21 +84,26 @@ def agent_loop(
     memory: MemoryStore,
     max_steps: int = MAX_AGENT_STEPS,
     on_tool_start: Optional[Callable] = None,
+    on_thinking: Optional[Callable] = None,
 ) -> str:
-    """ReAct-style agentic loop: plan -> execute -> observe -> repeat until reply."""
+    """ReAct agentic loop: plan -> execute -> observe -> repeat until reply."""
     memory.session_append("user", user_message)
     observations = []
 
     for step in range(max_steps):
-        plan = planner.plan(user_message, observations=observations)
+        if on_thinking:
+            on_thinking(step + 1, len(observations))
 
-        if plan.get("action") == "reply":
+        plan = planner.plan(user_message, observations=observations)
+        action = plan.get("action", "reply")
+
+        if action == "reply":
             reply = plan.get("content", "No reply generated.")
             memory.session_append("assistant", reply)
             return reply
 
-        if plan.get("action") == "tool":
-            tool_name = plan.get("tool", "unknown")
+        if action in TOOL_ACTIONS or action == "tool":
+            tool_name = plan.get("tool", action) if action == "tool" else action
             tool_args = plan.get("args", {})
             if on_tool_start:
                 on_tool_start(step + 1, tool_name, tool_args)
@@ -97,12 +116,12 @@ def agent_loop(
             })
             continue
 
-        # Unknown action
+        # Unknown
         reply = plan.get("content", str(plan))
         memory.session_append("assistant", reply)
         return reply
 
-    # Max steps — compile results
+    # Max steps
     parts = ["Completed multiple steps:\n"]
     for obs in observations:
         parts.append(f"[{obs['tool']}] {obs['result'][:2000]}")

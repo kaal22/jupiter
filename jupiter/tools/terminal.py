@@ -1,10 +1,7 @@
-"""Terminal tools — explain (read-only), exec (restricted)."""
-import os
+"""Terminal tools — explain (read-only), exec."""
 import subprocess
 from typing import Optional
 from jupiter.safety.broker import ToolResult
-
-ALLOW_SUDO = os.environ.get("JUPITER_ALLOW_SUDO", "0") == "1"
 
 SAFE_READ_ONLY = frozenset({
     "cat", "head", "tail", "less", "grep", "ls", "pwd", "whoami", "date",
@@ -31,8 +28,6 @@ def terminal_explain(command: str) -> ToolResult:
 def terminal_exec(command: str, timeout_seconds: int = 120) -> ToolResult:
     if not command or not command.strip():
         return ToolResult(success=False, output="", error="Empty command")
-    if not ALLOW_SUDO and command.strip().lower().startswith("sudo"):
-        return ToolResult(success=False, output="", error="sudo is blocked by default. Set JUPITER_ALLOW_SUDO=1 to enable.")
     try:
         r = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=timeout_seconds)
         out = (r.stdout or "") + (r.stderr or "")

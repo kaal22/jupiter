@@ -6,6 +6,13 @@ from jupiter.config import OLLAMA_BASE_URL, OLLAMA_CHAT_TIMEOUT, DEFAULT_MODEL
 from jupiter.storage.memory import MemoryStore
 from jupiter.prompt import get_system_info, build_system_prompt
 
+KNOWN_ACTIONS = frozenset({
+    "reply", "tool",
+    "system_status", "system_logs_tail", "system_diagnostics",
+    "terminal_explain", "terminal_exec",
+    "remember_preference", "remember_summary", "audit_log",
+})
+
 
 class JupiterPlanner:
     def __init__(self, base_url: str = OLLAMA_BASE_URL, model: Optional[str] = None, memory: Optional[MemoryStore] = None):
@@ -27,7 +34,7 @@ class JupiterPlanner:
             return (r.json().get("message") or {}).get("content", "")
 
     def _extract_json(self, text: str) -> Optional[dict]:
-        """Extract a JSON action object from LLM response, handling text wrapping."""
+        """Extract a JSON action object from LLM response."""
         text = text.strip()
         # Direct parse
         try:
@@ -44,7 +51,7 @@ class JupiterPlanner:
                     pass
         # Find JSON by matching braces
         idx = text.find('{')
-        while idx >= 0 and idx < len(text):
+        while idx is not None and 0 <= idx < len(text):
             depth = 0
             for i in range(idx, len(text)):
                 if text[i] == '{':
@@ -59,7 +66,8 @@ class JupiterPlanner:
                         except json.JSONDecodeError:
                             pass
                         break
-            idx = text.find('{', idx + 1)
+            next_idx = text.find('{', idx + 1)
+            idx = next_idx if next_idx > idx else None
         return None
 
     def plan(self, user_message: str, observations: list = None) -> dict:
@@ -70,7 +78,7 @@ class JupiterPlanner:
         prompt_parts.append(f"User: {user_message}")
 
         if observations:
-            prompt_parts.append("\n--- Tool Results (this turn) ---")
+            prompt_parts.append("\n--- Tool Results ---")
             for obs in observations:
                 prompt_parts.append(
                     f"[Step {obs['step']}] {obs['tool']}({json.dumps(obs['args'])})\n"
@@ -78,8 +86,8 @@ class JupiterPlanner:
                 )
             prompt_parts.append("---")
             prompt_parts.append(
-                "Decide next action. If you have enough info, reply with a summary. "
-                "If you need more data, run another tool."
+                "Based on the results, decide next action. "
+                "Reply if you have enough info, or run another tool."
             )
 
         full_prompt = "\n\n".join(prompt_parts)
@@ -89,9 +97,6 @@ class JupiterPlanner:
         ]
         response = self._chat(messages)
         plan = self._extract_json(response)
-        if plan is None:
+        if plan is None or plan.get("action") not in KNOWN_ACTIONS:
             plan = {"action": "reply", "content": response}
-        if plan.get("action") not in ("reply", "tool"):
-            plan["action"] = "reply"
-            plan["content"] = response
         return plan

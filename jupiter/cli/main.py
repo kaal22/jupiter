@@ -12,8 +12,7 @@ JUPITER_API_URL = f"http://{API_HOST}:{API_PORT}"
 @click.pass_context
 @click.version_option(version=__version__)
 def cli(ctx):
-    """Jupiter OS — local AI agent. Just run 'jupiter' and ask anything.
-    You can say 'scan my network', 'show audit log', or chat. No need to remember commands."""
+    """Jupiter OS — local AI agent. Just run 'jupiter' and tell it what to do."""
     ensure_dirs()
     if ctx.invoked_subcommand is None:
         ctx.invoke(chat)
@@ -22,7 +21,7 @@ def cli(ctx):
 @cli.command()
 @click.option("--api-url", default=JUPITER_API_URL, envvar="JUPITER_API_URL")
 def chat(api_url: str):
-    """Start Jupiter and ask in plain language (default when you run 'jupiter')."""
+    """Start Jupiter interactive chat (default)."""
     try:
         r = httpx.get(f"{api_url.rstrip('/')}/health", timeout=2.0)
         if r.status_code == 200:
@@ -32,9 +31,10 @@ def chat(api_url: str):
         pass
     _chat_local()
 
+
 def _chat_via_api(api_url: str):
     url = f"{api_url.rstrip('/')}/chat"
-    click.echo("Jupiter — your local AI agent. Tell me what to do. Ctrl+D or 'exit' to quit.")
+    click.echo("Jupiter ready. Tell me what to do. (Ctrl+D or 'exit' to quit)")
     while True:
         try:
             line = click.prompt("You", default="", show_default=False)
@@ -43,11 +43,13 @@ def _chat_via_api(api_url: str):
         if not line or line.strip().lower() in ("exit", "quit", "q"):
             break
         try:
+            click.echo("  [working...]")
             r = httpx.post(url, json={"message": line.strip()}, timeout=OLLAMA_CHAT_TIMEOUT)
             r.raise_for_status()
             click.echo("Jupiter: " + r.json().get("reply", ""))
         except Exception as e:
             click.echo(f"Error: {e}", err=True)
+
 
 def _chat_local():
     from jupiter.agent.daemon import agent_loop
@@ -55,18 +57,24 @@ def _chat_local():
     from jupiter.safety.broker import SafetyBroker
     from jupiter.storage.memory import MemoryStore
     from jupiter.storage.audit import AuditStore
-    click.echo("Jupiter — your local AI agent. Tell me what to do. Ctrl+D or 'exit' to quit.")
+    click.echo("Jupiter ready. Tell me what to do. (Ctrl+D or 'exit' to quit)")
     memory = MemoryStore()
     audit = AuditStore()
     broker = SafetyBroker(audit=audit)
     planner = JupiterPlanner(memory=memory)
 
+    def on_thinking(step, num_obs):
+        if step == 1:
+            click.echo("  [thinking...]")
+        else:
+            click.echo("  [analyzing step " + str(step) + "...]")
+
     def on_tool_start(step, tool, args):
         cmd = args.get("command", "") if isinstance(args, dict) else ""
         if cmd:
-            click.echo(f"  \u26a1 Step {step}: {cmd}")
+            click.echo(f"  >> step {step}: running: {cmd}")
         else:
-            click.echo(f"  \u26a1 Step {step}: {tool}")
+            click.echo(f"  >> step {step}: {tool}")
 
     while True:
         try:
@@ -75,8 +83,13 @@ def _chat_local():
             break
         if not line or line.strip().lower() in ("exit", "quit", "q"):
             break
-        output = agent_loop(line.strip(), planner, broker, memory, on_tool_start=on_tool_start)
+        output = agent_loop(
+            line.strip(), planner, broker, memory,
+            on_tool_start=on_tool_start,
+            on_thinking=on_thinking,
+        )
         click.echo("Jupiter: " + output)
+
 
 @cli.command()
 @click.option("--api-url", default=JUPITER_API_URL)
@@ -89,7 +102,8 @@ def audit(api_url: str, limit: int):
         for e in r.json().get("entries", []):
             click.echo(f"  {e.get('created_at')} | {e.get('action')} | {e.get('scope')} | {e.get('outcome')}")
     except Exception as e:
-        click.echo(f"Error: {e}. Is the API running? Try: python -m jupiter.api.main", err=True)
+        click.echo(f"Error: {e}. Is the API running?", err=True)
+
 
 @cli.command()
 def status():
@@ -110,6 +124,7 @@ def status():
             click.echo("  Models: (Ollama not reachable)")
     except Exception:
         click.echo("  Models: (Ollama not reachable)")
+
 
 def main():
     cli()
