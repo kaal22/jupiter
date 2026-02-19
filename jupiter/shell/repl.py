@@ -7,7 +7,15 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import PathCompleter
-from jupiter.config import JUPITER_DATA, ensure_dirs
+from jupiter.config import JUPITER_DATA, ensure_dirs, OLLAMA_BASE_URL, DEFAULT_MODEL
+from jupiter.agent.shell import ShellSession
+
+# Agent Imports for /auto
+from jupiter.agent.daemon import agent_loop, MAX_AGENT_STEPS
+from jupiter.agent.planner import JupiterPlanner
+from jupiter.safety.broker import SafetyBroker
+from jupiter.storage.memory import MemoryStore
+from jupiter.storage.audit import AuditStore
 
 def get_history_file():
     ensure_dirs()
@@ -75,6 +83,16 @@ def repl_loop():
                     process_ai_command(session, query)
                 continue
 
+            # Check for /auto automation
+            if text.startswith("/auto"):
+                goal = text[5:].strip()
+                if goal:
+                    output = process_auto_command(session, goal)
+                    print("\n[AGENT REPORT]\n" + output)
+                else:
+                    print("Usage: /auto <goal>")
+                continue
+
             parts = shlex.split(text)
             if not parts:
                 continue
@@ -97,6 +115,44 @@ def repl_loop():
             break
         except Exception as e:
             print(f"Shell Error: {e}")
+    
+    # Cleanup on exit
+    if ShellSession._instance:
+        ShellSession._instance.close()
+
+def process_auto_command(session, goal: str) -> str:
+    print(f"Starting Multi-Step Agent for goal: '{goal}'")
+    
+    # Initialize Agent components
+    memory = MemoryStore()
+    audit = AuditStore()
+    broker = SafetyBroker(audit=audit)
+    planner = JupiterPlanner(
+        base_url=OLLAMA_BASE_URL,
+        model=memory.preference_get("model") or DEFAULT_MODEL, 
+        memory=memory
+    )
+
+    def shell_confirm(msg: str) -> bool:
+        if session:
+            ans = session.prompt(f"\n[CONFIRM] {msg} (y/n): ")
+        else:
+            ans = input(f"\n[CONFIRM] {msg} (y/n): ")
+        return ans.strip().lower().startswith('y')
+
+    try:
+        return agent_loop(
+            user_message=goal,
+            planner=planner,
+            broker=broker,
+            memory=memory,
+            confirm_callback=shell_confirm,
+            max_steps=MAX_AGENT_STEPS,
+            on_tool_start=lambda s, t, a: print(f">> step {s}: {t} {a}"),
+            on_tool_result=lambda s, t, r: None # don't print result, agent_loop summarizes
+        )
+    except Exception as e:
+        return f"Agent Error: {e}"
 
 def process_ai_command(session, query):
     from jupiter.shell.intelligence import suggest_command
