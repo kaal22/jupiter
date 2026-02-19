@@ -25,6 +25,7 @@
 ## Phase 5: Advanced Capabilities (IN PROGRESS)
 - [x] Scaffold `jupiter/exploitation/` module structure.
 - [x] Implement basic exploit searching (e.g. `searchsploit` wrapper).
-- [ ] Investigate Metasploit RPC integration.
-- [ ] Auto-suggest exploits based on Nmap service versions.face Dashboard.
+- [x] Implement Metasploit Integration (via persistent `msfconsole` PTY wrapper).
+- [ ] Auto-suggest exploits based on Nmap service versions.
+- [ ] Implement Web Interface Dashboard.
 - [ ] Persistent Memory across sessions (vector store).

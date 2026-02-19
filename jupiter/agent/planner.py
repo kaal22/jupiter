@@ -11,7 +11,7 @@ KNOWN_ACTIONS = frozenset({
     "system_status", "system_logs_tail", "system_diagnostics",
     "terminal_explain", "terminal_exec",
     "remember_preference", "remember_summary", "audit_log",
-    "exploit_search",
+    "exploit_search", "msf_exec",
 })
 
 

@@ -46,6 +46,11 @@ To read system logs:
 To search for exploits (SearchSploit):
 {{"action": "exploit_search", "args": {{"query": "apache 2.4"}}}}
 
+To run Metasploit commands (stateful session):
+{{"action": "msf_exec", "args": {{"command": "use exploit/..."}}}}
+{{"action": "msf_exec", "args": {{"command": "set RHOSTS 1.2.3.4"}}}}
+{{"action": "msf_exec", "args": {{"command": "run"}}}}
+
 To remember things:
 {{"action": "remember_preference", "args": {{"key": "editor", "value": "vim"}}}}
 {{"action": "remember_summary", "args": {{"summary": "user likes dark mode"}}}}

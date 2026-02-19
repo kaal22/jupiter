@@ -6,9 +6,9 @@ from jupiter.safety.broker import SafetyBroker, Scope, ToolResult
 from jupiter.storage.audit import AuditStore
 from jupiter.storage.memory import MemoryStore
 from jupiter.agent.planner import JupiterPlanner
-from jupiter.tools.system import system_status, system_logs_tail, system_diagnostics
 from jupiter.tools.terminal import terminal_explain, terminal_exec, terminal_type
 from jupiter.tools.exploit import search_exploit
+from jupiter.tools.msf import msf_exec
 
 MAX_AGENT_STEPS = 6
 
@@ -17,7 +17,7 @@ TOOL_ACTIONS = frozenset({
     "system_status", "system_logs_tail", "system_diagnostics",
     "terminal_explain", "terminal_exec",
     "remember_preference", "remember_summary", "audit_log",
-    "exploit_search",
+    "exploit_search", "msf_exec",
 })
 
 
@@ -69,6 +69,7 @@ def execute_plan(plan: dict, broker: SafetyBroker, memory: MemoryStore, confirm_
             "terminal_exec": (Scope.TERMINAL_EXEC, lambda: terminal_exec(args.get("command", ""), args.get("timeout_seconds", 120))),
             "terminal_type": (Scope.TERMINAL_EXEC, lambda: terminal_type(args.get("text", ""))),
             "exploit_search": (Scope.EXPLOIT_SEARCH, lambda: search_exploit(args.get("query", ""))),
+            "msf_exec": (Scope.EXPLOIT_EXEC, lambda: msf_exec(args.get("command", ""))),
         }
         
         if tool not in tool_map:
