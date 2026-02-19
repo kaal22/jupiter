@@ -76,6 +76,9 @@ def execute_plan(plan: dict, broker: SafetyBroker, memory: MemoryStore, confirm_
     # First attempt
     result = run_tool_logic(initial_confirmed)
     
+    # Debug confirmation flow
+    print(f"DEBUG: tool={tool} result_type={type(result)} success={getattr(result, 'success', 'N/A')} error='{getattr(result, 'error', 'N/A')}' has_callback={confirm_callback is not None}", file=sys.stderr)
+    
     # Handle string confirmation request (memory tools)
     if isinstance(result, str):
         if result == "Action requires explicit user confirmation." and confirm_callback:
@@ -85,17 +88,21 @@ def execute_plan(plan: dict, broker: SafetyBroker, memory: MemoryStore, confirm_
         return result
         
     # Handle ToolResult confirmation request (broker)
-    if isinstance(result, ToolResult) and not result.success and "confirmation" in (result.error or "").lower():
+    # Relax type check in case of reload issues, look for attributes
+    is_tool_result = hasattr(result, 'success') and hasattr(result, 'error')
+    
+    if is_tool_result and not result.success and "confirmation" in (result.error or "").lower():
         if confirm_callback:
             cmd_preview = args.get("command", "") if tool == "terminal_exec" else str(args)
+            print(f"DEBUG: Triggering confirmation for {tool}", file=sys.stderr)
             if confirm_callback(f"Allow {tool}: {cmd_preview}"):
                 # Retry with confirmation
                 retry_result = run_tool_logic(True)
-                if isinstance(retry_result, ToolResult):
+                if hasattr(retry_result, 'success'): # ToolResult-like
                     return retry_result.error or retry_result.output
                 return retry_result
                 
-    if isinstance(result, ToolResult):
+    if is_tool_result:
         return result.error or result.output
     return str(result)
 
