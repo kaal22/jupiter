@@ -62,41 +62,26 @@ def repl_loop():
             if not text.strip():
                 continue
                 
-            # Check for AI command (starts with / or ?)
+            # Check for explicit AI command
             if text.startswith("?") or text.startswith("/"):
-                from jupiter.shell.intelligence import suggest_command
-                
                 query = text[1:].strip()
-                if not query:
-                    print("Usage: ? <natural language request>")
-                    continue
-                    
-                print(f"Thinking about '{query}'...")
-                cmd, explanation = suggest_command(query)
-                
-                if cmd:
-                    print(f"\n> Suggested: {cmd}")
-                    print(f"  Reason: {explanation}")
-                    
-                    try:
-                        ans = session.prompt(f"Execute? [Y/n] ")
-                        if ans.lower() in ('', 'y', 'yes'):
-                            run_system_command(cmd)
-                        else:
-                            print("Cancelled.")
-                    except KeyboardInterrupt:
-                        print("Cancelled.")
-                else:
-                    print(f"AI could not suggest a command. {explanation}")
+                if query:
+                    process_ai_command(session, query)
                 continue
 
             # Handle built-ins
             parts = shlex.split(text)
             if handle_local_command(parts):
                 continue
-                
-            # Passthrough to system
-            run_system_command(text)
+            
+            # Check if command exists
+            from jupiter.shell.intelligence import is_valid_command
+            if is_valid_command(parts[0]):
+                # It's a real command (or we think so)
+                run_system_command(text)
+            else:
+                # likely natural language
+                process_ai_command(session, text)
 
         except KeyboardInterrupt:
             continue
@@ -104,6 +89,29 @@ def repl_loop():
             break
         except Exception as e:
             print(f"Shell Error: {e}")
+
+def process_ai_command(session, query):
+    from jupiter.shell.intelligence import suggest_command
+    
+    print(f"Thinking about '{query}'...")
+    cmd, explanation = suggest_command(query)
+    
+    if cmd:
+        print(f"\n> Suggested: {cmd}")
+        print(f"  Reason: {explanation}")
+        
+        try:
+            ans = session.prompt(f"Execute? [Y/n] ")
+            if ans.lower() in ('', 'y', 'yes'):
+                run_system_command(cmd)
+            else:
+                print("Cancelled.")
+        except KeyboardInterrupt:
+            print("Cancelled.")
+    else:
+        print(f"AI could not suggest a command. {explanation}")
+
+
 
 if __name__ == "__main__":
     repl_loop()
