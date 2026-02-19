@@ -12,8 +12,8 @@ JUPITER_API_URL = f"http://{API_HOST}:{API_PORT}"
 @click.pass_context
 @click.version_option(version=__version__)
 def cli(ctx):
-    """Jupiter OS — local AI assistant. Just run 'jupiter' and ask anything.
-    You can say 'what's my system status?', 'show audit log', or chat. No need to remember commands."""
+    """Jupiter OS — local AI agent. Just run 'jupiter' and ask anything.
+    You can say 'scan my network', 'show audit log', or chat. No need to remember commands."""
     ensure_dirs()
     if ctx.invoked_subcommand is None:
         ctx.invoke(chat)
@@ -34,7 +34,7 @@ def chat(api_url: str):
 
 def _chat_via_api(api_url: str):
     url = f"{api_url.rstrip('/')}/chat"
-    click.echo("Jupiter — ask anything (e.g. 'what's my system status?', 'list files here', 'show audit log'). Type your question and Enter. Ctrl+D or 'exit' to quit.")
+    click.echo("Jupiter — your local AI agent. Tell me what to do. Ctrl+D or 'exit' to quit.")
     while True:
         try:
             line = click.prompt("You", default="", show_default=False)
@@ -50,16 +50,24 @@ def _chat_via_api(api_url: str):
             click.echo(f"Error: {e}", err=True)
 
 def _chat_local():
-    from jupiter.agent.daemon import run_daemon_loop, execute_plan
+    from jupiter.agent.daemon import agent_loop
     from jupiter.agent.planner import JupiterPlanner
     from jupiter.safety.broker import SafetyBroker
     from jupiter.storage.memory import MemoryStore
     from jupiter.storage.audit import AuditStore
-    click.echo("Jupiter — ask anything (e.g. 'what's my system status?', 'list files here', 'show audit log'). Type your question and Enter. Ctrl+D or 'exit' to quit.")
+    click.echo("Jupiter — your local AI agent. Tell me what to do. Ctrl+D or 'exit' to quit.")
     memory = MemoryStore()
     audit = AuditStore()
     broker = SafetyBroker(audit=audit)
     planner = JupiterPlanner(memory=memory)
+
+    def on_tool_start(step, tool, args):
+        cmd = args.get("command", "") if isinstance(args, dict) else ""
+        if cmd:
+            click.echo(f"  \u26a1 Step {step}: {cmd}")
+        else:
+            click.echo(f"  \u26a1 Step {step}: {tool}")
+
     while True:
         try:
             line = click.prompt("You", default="", show_default=False)
@@ -67,11 +75,7 @@ def _chat_local():
             break
         if not line or line.strip().lower() in ("exit", "quit", "q"):
             break
-        user_message = line.strip()
-        memory.session_append("user", user_message)
-        plan = planner.plan(user_message)
-        output = execute_plan(plan, broker, memory)
-        memory.session_append("assistant", output)
+        output = agent_loop(line.strip(), planner, broker, memory, on_tool_start=on_tool_start)
         click.echo("Jupiter: " + output)
 
 @cli.command()

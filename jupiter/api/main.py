@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from jupiter.config import API_HOST, API_PORT, ensure_dirs
-from jupiter.agent.daemon import execute_plan
+from jupiter.agent.daemon import agent_loop
 from jupiter.agent.planner import JupiterPlanner
 from jupiter.safety.broker import SafetyBroker
 from jupiter.storage.memory import MemoryStore
@@ -35,10 +35,7 @@ async def chat(body: ChatIn):
     memory = get_memory()
     planner = get_planner()
     broker = get_broker()
-    memory.session_append("user", body.message)
-    plan = planner.plan(body.message)
-    output = execute_plan(plan, broker, memory)
-    memory.session_append("assistant", output)
+    output = agent_loop(body.message, planner, broker, memory)
     return ChatOut(reply=output)
 
 @app.get("/memory/session")

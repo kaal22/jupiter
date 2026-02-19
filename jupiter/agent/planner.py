@@ -16,22 +16,80 @@ class JupiterPlanner:
 
     def _chat(self, messages: list) -> str:
         with httpx.Client(timeout=OLLAMA_CHAT_TIMEOUT) as client:
-            r = client.post(f"{self.base_url}/api/chat", json={"model": self.model, "messages": messages, "stream": False})
+            r = client.post(f"{self.base_url}/api/chat", json={
+                "model": self.model,
+                "messages": messages,
+                "stream": False,
+                "format": "json",
+                "options": {"temperature": 0.1},
+            })
             r.raise_for_status()
             return (r.json().get("message") or {}).get("content", "")
 
-    def plan(self, user_message: str) -> dict:
-        context = self.memory.get_context_for_agent(session_limit=20, episodic_limit=5)
-        prompt = (context + "\n\nUser: " + user_message) if context else user_message
-        full_user = self._system_prompt + "\n\n---\nConversation context:\n" + prompt
-        response = self._chat([{"role": "user", "content": full_user}])
-        json_str = response.strip()
-        for start in ("```json", "```"):
-            if start in json_str:
-                json_str = json_str.split(start, 1)[-1].split("```", 1)[0].strip()
+    def _extract_json(self, text: str) -> Optional[dict]:
+        """Extract a JSON action object from LLM response, handling text wrapping."""
+        text = text.strip()
+        # Direct parse
         try:
-            plan = json.loads(json_str)
+            return json.loads(text)
         except json.JSONDecodeError:
+            pass
+        # Strip code fences
+        for marker in ("```json", "```"):
+            if marker in text:
+                inner = text.split(marker, 1)[-1].split("```", 1)[0].strip()
+                try:
+                    return json.loads(inner)
+                except json.JSONDecodeError:
+                    pass
+        # Find JSON by matching braces
+        idx = text.find('{')
+        while idx >= 0 and idx < len(text):
+            depth = 0
+            for i in range(idx, len(text)):
+                if text[i] == '{':
+                    depth += 1
+                elif text[i] == '}':
+                    depth -= 1
+                    if depth == 0:
+                        try:
+                            obj = json.loads(text[idx:i+1])
+                            if "action" in obj:
+                                return obj
+                        except json.JSONDecodeError:
+                            pass
+                        break
+            idx = text.find('{', idx + 1)
+        return None
+
+    def plan(self, user_message: str, observations: list = None) -> dict:
+        context = self.memory.get_context_for_agent(session_limit=20, episodic_limit=5)
+        prompt_parts = []
+        if context:
+            prompt_parts.append(context)
+        prompt_parts.append(f"User: {user_message}")
+
+        if observations:
+            prompt_parts.append("\n--- Tool Results (this turn) ---")
+            for obs in observations:
+                prompt_parts.append(
+                    f"[Step {obs['step']}] {obs['tool']}({json.dumps(obs['args'])})\n"
+                    f"Output:\n{obs['result']}"
+                )
+            prompt_parts.append("---")
+            prompt_parts.append(
+                "Decide next action. If you have enough info, reply with a summary. "
+                "If you need more data, run another tool."
+            )
+
+        full_prompt = "\n\n".join(prompt_parts)
+        messages = [
+            {"role": "system", "content": self._system_prompt},
+            {"role": "user", "content": full_prompt},
+        ]
+        response = self._chat(messages)
+        plan = self._extract_json(response)
+        if plan is None:
             plan = {"action": "reply", "content": response}
         if plan.get("action") not in ("reply", "tool"):
             plan["action"] = "reply"

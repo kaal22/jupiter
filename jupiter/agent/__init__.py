@@ -1,3 +1,2 @@
-from .daemon import run_daemon, execute_plan
+from .daemon import run_daemon, execute_plan, agent_loop
 from .planner import JupiterPlanner
-__all__ = ["run_daemon", "execute_plan", "JupiterPlanner"]
