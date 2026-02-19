@@ -8,6 +8,7 @@ from jupiter.storage.memory import MemoryStore
 from jupiter.agent.planner import JupiterPlanner
 from jupiter.tools.system import system_status, system_logs_tail, system_diagnostics
 from jupiter.tools.terminal import terminal_explain, terminal_exec, terminal_type
+from jupiter.tools.exploit import search_exploit
 
 MAX_AGENT_STEPS = 6
 
@@ -16,6 +17,7 @@ TOOL_ACTIONS = frozenset({
     "system_status", "system_logs_tail", "system_diagnostics",
     "terminal_explain", "terminal_exec",
     "remember_preference", "remember_summary", "audit_log",
+    "exploit_search",
 })
 
 
@@ -66,6 +68,7 @@ def execute_plan(plan: dict, broker: SafetyBroker, memory: MemoryStore, confirm_
             "terminal_explain": (Scope.TERMINAL_READ, lambda: terminal_explain(args.get("command", ""))),
             "terminal_exec": (Scope.TERMINAL_EXEC, lambda: terminal_exec(args.get("command", ""), args.get("timeout_seconds", 120))),
             "terminal_type": (Scope.TERMINAL_EXEC, lambda: terminal_type(args.get("text", ""))),
+            "exploit_search": (Scope.EXPLOIT_SEARCH, lambda: search_exploit(args.get("query", ""))),
         }
         
         if tool not in tool_map:

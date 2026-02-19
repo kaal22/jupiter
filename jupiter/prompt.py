@@ -43,6 +43,9 @@ To get system status (CPU/RAM/Disk):
 To read system logs:
 {{"action": "system_logs_tail", "args": {{"service": "optional", "lines": 20}}}}
 
+To search for exploits (SearchSploit):
+{{"action": "exploit_search", "args": {{"query": "apache 2.4"}}}}
+
 To remember things:
 {{"action": "remember_preference", "args": {{"key": "editor", "value": "vim"}}}}
 {{"action": "remember_summary", "args": {{"summary": "user likes dark mode"}}}}

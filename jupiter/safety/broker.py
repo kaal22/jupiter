@@ -12,6 +12,8 @@ class Scope(Enum):
     TERMINAL_EXEC = "terminal.exec"
     EMAIL_READ = "email.read"
     EMAIL_WRITE = "email.write"
+    EXPLOIT_SEARCH = "exploit.search"
+    EXPLOIT_EXEC = "exploit.exec"
 
 
 @dataclass

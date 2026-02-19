@@ -22,7 +22,9 @@
 - [x] Install as `/usr/local/bin/jupiter`.
 - [x] Verify `sudo` behavior (password prompt works naturally).
 
-## Phase 5: Advanced Capabilities (NEXT)
-- [ ] Implement Exploitation Module (Metasploit integration?)
-- [ ] Implement Web Interface Dashboard.
+## Phase 5: Advanced Capabilities (IN PROGRESS)
+- [x] Scaffold `jupiter/exploitation/` module structure.
+- [x] Implement basic exploit searching (e.g. `searchsploit` wrapper).
+- [ ] Investigate Metasploit RPC integration.
+- [ ] Auto-suggest exploits based on Nmap service versions.face Dashboard.
 - [ ] Persistent Memory across sessions (vector store).
