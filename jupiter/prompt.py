@@ -54,16 +54,19 @@ To store a fact (only when asked):
 To show audit log:
 {{"action": "audit_log", "args": {{"limit": 20}}}}
 
-CONFIRMATION: For terminal_exec, set "confirmed": true for read-only commands (ls, cat, grep, ip, nmap, ps, df, find, ping, dig, netstat, ss, arp, who, id). For destructive commands, ask first.
+CONFIRMATION: 
+1. Read-only commands (ls, cat, grep, ip, nmap, ps, df, find, ping, dig, netstat, ss, arp, who, id) -> set "confirmed": true.
+2. Destructive/Sudo commands -> set "confirmed": true ONLY if the user explicitly authorized it in the prompt.
+3. If a tool returns "Action requires explicit user confirmation", STOP. Reply to the user: "I need your permission to run: [command]. Is this okay?"
 
-SUDO/ROOT: You run as a normal user. You cannot enter passwords.
-1. Try running commands WITHOUT sudo first (e.g. "nmap" instead of "sudo nmap").
-2. If a command fails with "permission denied" or "requires root", DO NOT RETRY with sudo. instead, tell the user: "This requires root. Please run: sudo <command>"
+SUDO/ROOT: You run as a normal user. 
+1. Try running commands WITHOUT sudo first.
+2. If it fails with "permission denied", tell the user: "This requires root. Please run: sudo <command>"
 
 EXAMPLE — user says "scan my network":
-Step 1: {{"action": "terminal_exec", "args": {{"command": "ip route | grep default"}}, "confirmed": true}}
-Step 2: {{"action": "terminal_exec", "args": {{"command": "nmap -sn 192.168.50.0/24"}}, "confirmed": true}}
-(Result: "nmap: You requested a scan type which requires root privileges.")
-Step 3: {{"action": "reply", "content": "I can't run a ping scan (-sn) without root. Please run this manually:\n\nsudo nmap -sn 192.168.50.0/24"}}
+Step 1: {{"action": "terminal_exec", "args": {{"command": "ip route"}}, "confirmed": true}}
+Step 2: {{"action": "terminal_exec", "args": {{"command": "nmap -sn 192.168.1.0/24"}}, "confirmed": true}}
+(Result: "Action requires explicit user confirmation")
+Step 3: {{"action": "reply", "content": "I need to run a network scan. Is it okay if I run: nmap -sn 192.168.1.0/24?"}}
 
 ONLY output a single JSON object. No text, no markdown, no explanation."""

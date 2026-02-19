@@ -1,8 +1,8 @@
 """Jupiter Agent Daemon — planner + executor with ReAct agentic loop."""
 import sys
-from typing import Optional, Callable
+from typing import Optional, Callable, Union
 from jupiter.config import ensure_dirs
-from jupiter.safety.broker import SafetyBroker, Scope
+from jupiter.safety.broker import SafetyBroker, Scope, ToolResult
 from jupiter.storage.audit import AuditStore
 from jupiter.storage.memory import MemoryStore
 from jupiter.agent.planner import JupiterPlanner
@@ -19,7 +19,7 @@ TOOL_ACTIONS = frozenset({
 })
 
 
-def execute_plan(plan: dict, broker: SafetyBroker, memory: MemoryStore) -> str:
+def execute_plan(plan: dict, broker: SafetyBroker, memory: MemoryStore, confirm_callback: Optional[Callable[[str], bool]] = None) -> Union[str, ToolResult]:
     action = plan.get("action", "reply")
     if action == "reply":
         return plan.get("content", "No reply generated.")
@@ -33,51 +33,74 @@ def execute_plan(plan: dict, broker: SafetyBroker, memory: MemoryStore) -> str:
         return f"Unknown action: {action}"
 
     args = plan.get("args") or {}
-    confirmed = plan.get("confirmed", False)
+    initial_confirmed = plan.get("confirmed", False)
+    
+    def run_tool_logic(is_confirmed: bool) -> Union[str, ToolResult]:
+        # Memory tools
+        if tool == "remember_preference":
+            if not is_confirmed: return "Action requires explicit user confirmation."
+            key, value = args.get("key"), args.get("value")
+            if not key: return "remember_preference needs args: key, value"
+            memory.preference_set(key, value or "")
+            return f"Stored preference: {key} = {value}"
+        
+        if tool == "remember_summary":
+            if not is_confirmed: return "Action requires explicit user confirmation."
+            summary = args.get("summary") or ""
+            if not summary: return "remember_summary needs args: summary"
+            memory.episodic_add(summary)
+            return f"Remembered: {summary}"
+            
+        # Audit log
+        if tool == "audit_log":
+            limit = int(args.get("limit", 20))
+            entries = broker.audit.get_recent(limit)
+            if not entries: return "No audit entries yet."
+            lines = [f"  {e.get('created_at')} | {e.get('action')} | {e.get('scope')} | {e.get('outcome')}" for e in entries]
+            return "Recent audit log:\n" + "\n".join(lines)
 
-    # Memory tools
-    if tool == "remember_preference":
-        if not confirmed:
-            return "User must confirm before I store a preference."
-        key, value = args.get("key"), args.get("value")
-        if not key:
-            return "remember_preference needs args: key, value"
-        memory.preference_set(key, value or "")
-        return f"Stored preference: {key} = {value}"
-    if tool == "remember_summary":
-        if not confirmed:
-            return "User must confirm before I remember that."
-        summary = args.get("summary") or ""
-        if not summary:
-            return "remember_summary needs args: summary"
-        memory.episodic_add(summary)
-        return f"Remembered: {summary}"
+        tool_map = {
+            "system_status": (Scope.SYSTEM_READ, lambda: system_status()),
+            "system_logs_tail": (Scope.SYSTEM_READ, lambda: system_logs_tail(args.get("service"), args.get("lines", 20))),
+            "system_diagnostics": (Scope.SYSTEM_READ, lambda: system_diagnostics()),
+            "terminal_explain": (Scope.TERMINAL_READ, lambda: terminal_explain(args.get("command", ""))),
+            "terminal_exec": (Scope.TERMINAL_EXEC, lambda: terminal_exec(args.get("command", ""), args.get("timeout_seconds", 120))),
+        }
+        
+        if tool not in tool_map:
+            return f"Unknown tool: {tool}"
+            
+        scope, fn = tool_map[tool]
+        return broker.execute(tool, scope, fn, confirmed=is_confirmed)
 
-    # Audit log
-    if tool == "audit_log":
-        limit = int(args.get("limit", 20))
-        entries = broker.audit.get_recent(limit)
-        if not entries:
-            return "No audit entries yet."
-        lines = [f"  {e.get('created_at')} | {e.get('action')} | {e.get('scope')} | {e.get('outcome')}" for e in entries]
-        return "Recent audit log:\n" + "\n".join(lines)
-
-    tool_map = {
-        "system_status": (Scope.SYSTEM_READ, lambda: system_status()),
-        "system_logs_tail": (Scope.SYSTEM_READ, lambda: system_logs_tail(args.get("service"), args.get("lines", 20))),
-        "system_diagnostics": (Scope.SYSTEM_READ, lambda: system_diagnostics()),
-        "terminal_explain": (Scope.TERMINAL_READ, lambda: terminal_explain(args.get("command", ""))),
-        "terminal_exec": (Scope.TERMINAL_EXEC, lambda: terminal_exec(args.get("command", ""), args.get("timeout_seconds", 120))),
-    }
-    if tool not in tool_map:
-        return f"Unknown tool: {tool}"
-    scope, fn = tool_map[tool]
-    result = broker.execute(tool, scope, fn, confirmed=confirmed)
-    return result.error or result.output
+    # First attempt
+    result = run_tool_logic(initial_confirmed)
+    
+    # Handle string confirmation request (memory tools)
+    if isinstance(result, str):
+        if result == "Action requires explicit user confirmation." and confirm_callback:
+            if confirm_callback(f"Allow {tool} {args}?"):
+                return run_tool_logic(True)
+            return "User denied confirmation."
+        return result
+        
+    # Handle ToolResult confirmation request (broker)
+    if isinstance(result, ToolResult) and not result.success and "confirmation" in (result.error or "").lower():
+        if confirm_callback:
+            cmd_preview = args.get("command", "") if tool == "terminal_exec" else str(args)
+            if confirm_callback(f"Allow {tool}: {cmd_preview}"):
+                # Retry with confirmation
+                retry_result = run_tool_logic(True)
+                if isinstance(retry_result, ToolResult):
+                    return retry_result.error or retry_result.output
+                return retry_result
+                
+    if isinstance(result, ToolResult):
+        return result.error or result.output
+    return str(result)
 
 
 def _is_loop(observations: list) -> bool:
-    """Detect if the agent is stuck repeating the same action."""
     if len(observations) < 2:
         return False
     last = observations[-1]
@@ -94,8 +117,8 @@ def agent_loop(
     on_tool_start: Optional[Callable] = None,
     on_tool_result: Optional[Callable] = None,
     on_thinking: Optional[Callable] = None,
+    confirm_callback: Optional[Callable[[str], bool]] = None,
 ) -> str:
-    """ReAct agentic loop: plan -> execute -> observe -> repeat until reply."""
     memory.session_append("user", user_message)
     observations = []
 
@@ -116,7 +139,9 @@ def agent_loop(
             tool_args = plan.get("args", {})
             if on_tool_start:
                 on_tool_start(step + 1, tool_name, tool_args)
-            result = execute_plan(plan, broker, memory)
+            
+            result = execute_plan(plan, broker, memory, confirm_callback=confirm_callback)
+            
             obs = {
                 "step": step + 1,
                 "tool": tool_name,
@@ -127,7 +152,6 @@ def agent_loop(
             if on_tool_result:
                 on_tool_result(step + 1, tool_name, result)
 
-            # Loop detection: if same command repeated, stop and summarize
             if _is_loop(observations):
                 parts = ["I ran into an issue (repeated command). Here's what I got:\n"]
                 for o in observations:
@@ -137,12 +161,10 @@ def agent_loop(
                 return final
             continue
 
-        # Unknown
         reply = plan.get("content", str(plan))
         memory.session_append("assistant", reply)
         return reply
 
-    # Max steps — compile results
     parts = ["Completed multiple steps:\n"]
     for obs in observations:
         parts.append(f"[{obs['tool']}] {obs['result'][:2000]}")
@@ -161,7 +183,14 @@ def run_daemon_loop(planner: JupiterPlanner, broker: SafetyBroker, memory: Memor
             user_message = line.strip()
             if not user_message:
                 continue
-            output = agent_loop(user_message, planner, broker, memory)
+            
+            def cli_confirm(msg: str) -> bool:
+                # Basic CLI confirmation interacting with stdin
+                print(f"\n[CONFIRM] {msg} (y/n): ", end="", flush=True)
+                ans = sys.stdin.readline().strip().lower()
+                return ans.startswith('y')
+
+            output = agent_loop(user_message, planner, broker, memory, confirm_callback=cli_confirm)
             print(output, flush=True)
         except KeyboardInterrupt:
             break
