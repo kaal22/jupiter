@@ -6,24 +6,40 @@
 
 ## Quick Start (Kali Linux / Debian)
 
-The recommended install for Kali Linux uses system packages for maximum integration.
+The recommended install for Kali uses `pipx` to avoid conflicts with system packages.
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/kaal22/jupiter.git ~/.local/share/jupiter-install
-cd ~/.local/share/jupiter-install
+# 1. Get the Code
+git clone https://github.com/kaal22/jupiter.git ~/.local/share/jupiter
+cd ~/.local/share/jupiter
+git pull origin main
 
-# 2. Run the V2 installer
-chmod +x install_v2_kali.sh
-sudo ./install_v2_kali.sh
+# 2. Install dependencies (Kali)
+sudo apt update && sudo apt install -y pipx python3-venv nmap curl build-essential python3-dev
+pipx ensurepath
+source ~/.bashrc  # Refresh PATH
+
+# 3. Install Ollama (Required AI Backend)
+command -v ollama >/dev/null 2>&1 || { curl -fsSL https://ollama.com/install.sh | sh; }
+ollama pull llama3.2:3b
+
+# 4. Install Jupiter (Isolated)
+pipx install . --force
 ```
 
-This will:
-- Install system dependencies (`python3-prompt-toolkit`, `nmap`, etc).
-- Install **Ollama** and pull the `llama3.2:3b` model.
-- Install the `jupiter` command globally.
-
 ## Features
+
+### 0. Real-time Dashboard (New!)
+
+Monitor your operations via a futuristic web interface.
+
+```bash
+jupiter dashboard
+```
+- **Live Terminal:** Full interactive shell in your browser with auto-AI launch.
+- **Activity Feed:** Watch exploits and commands execute in real-time.
+- **Target List:** Automatically tracks discovered hosts from Nmap scans.
+- **Access:** http://127.0.0.1:8000
 
 ### 1. Native Intelligent Shell (V2)
 
@@ -91,9 +107,9 @@ jupiter "check system status and tail the last 20 auth logs"
 To update to the latest version:
 
 ```bash
-cd ~/.local/share/jupiter-install
+cd ~/.local/share/jupiter
 git pull
-sudo pip install . --break-system-packages
+pipx install . --force
 ```
 
 ## Architecture
