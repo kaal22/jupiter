@@ -6,25 +6,17 @@
 
 ## Quick Start (Kali Linux / Debian)
 
-The recommended install for Kali uses `pipx` to avoid conflicts with system packages.
+This script installs everything (Python dependencies, Ollama AI, LLM Model, and Dashboard).
 
 ```bash
-# 1. Get the Code
+# 1. Get Code
 git clone https://github.com/kaal22/jupiter.git ~/.local/share/jupiter
 cd ~/.local/share/jupiter
 git pull origin main
 
-# 2. Install dependencies (Kali)
-sudo apt update && sudo apt install -y pipx python3-venv nmap curl build-essential python3-dev
-pipx ensurepath
-source ~/.bashrc  # Refresh PATH
-
-# 3. Install Ollama (Required AI Backend)
-command -v ollama >/dev/null 2>&1 || { curl -fsSL https://ollama.com/install.sh | sh; }
-ollama pull llama3.2:3b
-
-# 4. Install Jupiter (Isolated)
-pipx install . --force
+# 2. Run Installer
+chmod +x install.sh
+./install.sh
 ```
 
 ## Features
@@ -104,12 +96,12 @@ jupiter "check system status and tail the last 20 auth logs"
 
 ## Update
 
-To update to the latest version:
+Run the installer again to pull the latest code and dependencies:
 
 ```bash
 cd ~/.local/share/jupiter
 git pull
-pipx install . --force
+./install.sh
 ```
 
 ## Architecture
