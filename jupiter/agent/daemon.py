@@ -10,6 +10,7 @@ from jupiter.tools.terminal import terminal_explain, terminal_exec, terminal_typ
 from jupiter.tools.exploit import search_exploit
 from jupiter.tools.msf import msf_exec
 from jupiter.tools.nmap import scan_network
+from jupiter.tools.system import system_status, system_logs_tail, system_diagnostics
 
 MAX_AGENT_STEPS = 6
 
