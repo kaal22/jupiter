@@ -23,9 +23,9 @@ dependencies = [
 [project.scripts]
 jupiter = "jupiter.cli.main:main"
 
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["jupiter*"]
-
-[tool.setuptools.package-data]
-"*" = ["*.html", "*.css", "*.js"]
