@@ -56,9 +56,9 @@ To get system status (CPU/RAM/Disk):
 To read system logs:
 {{"action": "system_logs_tail", "args": {{"service": "optional", "lines": 20}}}}
 
-To scan a network (Nmap):
+To scan a network or target (Nmap):
 {{"action": "network_scan", "args": {{"target": "<target_ip_or_subnet>", "ports": "top-100"}}}}
-(Example target: If your IP is 192.168.50.15, scan 192.168.50.0/24)
+(IMPORTANT: If the user provides a specific IP like 10.10.10.20, use that EXACT IP. Only use your local subnet like 192.168.50.0/24 if the user specifically asks to scan the local network.)
 
 To search for exploits (SearchSploit):
 {{"action": "exploit_search", "args": {{"query": "apache 2.4"}}}}

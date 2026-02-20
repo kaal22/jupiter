@@ -151,10 +151,14 @@
             <div class="h-1/3 neon-border bg-black/80 p-2 overflow-hidden">
                 <h2 class="bg-cyan-900/20 p-2 font-bold mb-2 border-b border-cyan-500/30">MODULES</h2>
                 <div class="grid grid-cols-2 gap-2 text-xs text-center">
-                    <div class="p-2 border border-cyan-800 hover:bg-cyan-900/50 cursor-pointer" onclick="window.sendCommand('nmap -sn 192.168.1.0/24')">NMAP</div>
-                    <div class="p-2 border border-cyan-800 hover:bg-cyan-900/50 cursor-pointer" onclick="window.sendCommand('msfconsole')">MSFCONSOLE</div>
-                    <div class="p-2 border border-cyan-800 hover:bg-cyan-900/50 cursor-pointer" onclick="window.sendCommand('searchsploit')">SEARCHSPLOIT</div>
-                    <div class="p-2 border border-cyan-800 hover:bg-cyan-900/50 cursor-pointer text-gray-500" onclick="window.sendCommand('echo Webshell logic not loaded')">WEBSHELL
+                    <div class="p-2 border border-cyan-800 hover:bg-cyan-900/50 cursor-pointer"
+                        onclick="window.sendCommand('nmap -sn ', false)">NMAP</div>
+                    <div class="p-2 border border-cyan-800 hover:bg-cyan-900/50 cursor-pointer"
+                        onclick="window.sendCommand('msfconsole')">MSFCONSOLE</div>
+                    <div class="p-2 border border-cyan-800 hover:bg-cyan-900/50 cursor-pointer"
+                        onclick="window.sendCommand('searchsploit')">SEARCHSPLOIT</div>
+                    <div class="p-2 border border-cyan-800 hover:bg-cyan-900/50 cursor-pointer text-gray-500"
+                        onclick="window.sendCommand('echo Webshell logic not loaded')">WEBSHELL
                     </div>
                 </div>
             </div>
@@ -239,9 +243,9 @@
                     term.onData(data => ws.send(data));
 
                     // Expose globally so HTML onclick handlers can send commands
-                    window.sendCommand = (cmd) => {
+                    window.sendCommand = (cmd, execute = true) => {
                         if (ws.readyState === WebSocket.OPEN) {
-                            ws.send(cmd + '\r');
+                            ws.send(cmd + (execute ? '\r' : ''));
                             term.focus();
                         }
                     };
