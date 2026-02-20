@@ -71,7 +71,7 @@ def execute_plan(plan: dict, broker: SafetyBroker, memory: MemoryStore, confirm_
             "terminal_type": (Scope.TERMINAL_EXEC, lambda: terminal_type(args.get("text", ""))),
             "exploit_search": (Scope.EXPLOIT_SEARCH, lambda: search_exploit(args.get("query", ""))),
             "msf_exec": (Scope.EXPLOIT_EXEC, lambda: msf_exec(args.get("command", ""))),
-            "network_scan": (Scope.NETWORK_SCAN, lambda: scan_network(args.get("target", "localhost"), args.get("ports", "top-100"), int(args.get("speed", 4)))),
+            "network_scan": (Scope.NETWORK_SCAN, lambda: scan_network(args.get("target", "auto"), args.get("ports", "top-100"), int(args.get("speed", 4)))),
         }
         
         if tool not in tool_map:

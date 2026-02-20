@@ -1,11 +1,34 @@
 """Nmap wrapper for structured service discovery."""
 import subprocess
 import shutil
+import re
 import xml.etree.ElementTree as ET
 from jupiter.safety.broker import ToolResult
 
+def get_local_cidr() -> str:
+    """Detect local network CIDR."""
+    try:
+        # Get default route interface
+        r = subprocess.run(["ip", "route", "show", "default"], capture_output=True, text=True)
+        # e.g. "default via 10.0.2.2 dev eth0 proto dhcp src 10.0.2.15 metric 100"
+        m = re.search(r"dev\s+(\S+)", r.stdout)
+        if not m: return "127.0.0.1"
+        iface = m.group(1)
+        
+        # Get IP/CIDR for interface
+        r = subprocess.run(["ip", "-o", "-f", "inet", "addr", "show", iface], capture_output=True, text=True)
+        # e.g. "2: eth0    inet 10.0.2.15/24 brd 10.0.2.255 scope global dynamic eth0"
+        m = re.search(r"inet\s+([0-9\./]+)", r.stdout)
+        return m.group(1) if m else "127.0.0.1"
+    except Exception:
+        return "127.0.0.1"
+
+
 def scan_network(target: str, ports: str = "top-100", speed: int = 4) -> ToolResult:
     """Run Nmap scan and return structured service info."""
+    if target == "auto":
+        target = get_local_cidr()
+        
     if not shutil.which("nmap"):
         return ToolResult(success=False, output="", error="Nmap not found. Install: sudo apt install nmap")
 

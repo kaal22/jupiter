@@ -102,7 +102,11 @@ async def get_targets(request: Request):
             continue
 
         if action == "network_scan":
-            t = detail.get("target") or detail.get("args", {}).get("target")
+            t = detail.get("target")
+            if not t:
+                args = detail.get("args", {})
+                if isinstance(args, dict):
+                    t = args.get("target")
             if t:
                 targets[t] = "SCANNED"
             
