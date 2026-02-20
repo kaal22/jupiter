@@ -34,8 +34,10 @@ class TerminalManager:
             os.environ["TERM"] = "xterm-256color"
             os.environ["JUPITER_SHELL"] = "dashboard"
             
-            # Execute bash
-            cmd = ["/bin/bash"]
+            # Execute bash with auto-launch of Jupiter
+            # -l: Login shell (loads PATH)
+            # -c: Run command and then drop to shell
+            cmd = ["/bin/bash", "-l", "-c", "echo '[JUPITER] Establishing Neural Link...'; jupiter shell; exec bash"]
             try:
                 os.execvp(cmd[0], cmd)
             except Exception as e:
