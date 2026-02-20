@@ -3,11 +3,24 @@ import platform
 import socket
 
 
+def get_local_ip() -> str:
+    try:
+        # UDP socket to Google DNS (doesn't actually send data) to get routing interface
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0.1)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
 def get_system_info() -> str:
     try:
         u = platform.uname()
         hostname = socket.gethostname() or u.node
-        return f"OS: {u.system} {u.release} | Hostname: {hostname} | Machine: {u.machine}"
+        local_ip = get_local_ip()
+        return f"OS: {u.system} {u.release} | Hostname: {hostname} | IP: {local_ip}"
     except Exception:
         return "OS: Linux (unknown)"
 
@@ -17,8 +30,8 @@ def build_system_prompt(system_info: str) -> str:
 
 RULES:
 1. ACT, don't ask. When the user wants something done, DO IT with tools.
-2. Gather context yourself. Need the IP range? Run "ip route". Need a file? Run "find" or "ls". Do NOT ask the user.
-3. You run in a loop. After each tool you see its output and pick the next action. Chain multiple tools to finish the job.
+2. Gather context yourself. Need the IP range? Check "ip route" or your System Info IP.
+3. You run in a loop. After each tool you see its output and pick the next action. Chain multiple tools.
 4. When you have enough info, use "reply" with clear summary.
 
 SYSTEM: {system_info}
@@ -44,7 +57,8 @@ To read system logs:
 {{"action": "system_logs_tail", "args": {{"service": "optional", "lines": 20}}}}
 
 To scan a network (Nmap):
-{{"action": "network_scan", "args": {{"target": "192.168.1.1", "ports": "top-100"}}}}
+{{"action": "network_scan", "args": {{"target": "<target_ip_or_subnet>", "ports": "top-100"}}}}
+(Example target: If your IP is 192.168.50.15, scan 192.168.50.0/24)
 
 To search for exploits (SearchSploit):
 {{"action": "exploit_search", "args": {{"query": "apache 2.4"}}}}
@@ -75,10 +89,9 @@ INTERACTIVE SHELL:
 - TWO: If you don't know, reply to user: "I need the sudo password to proceed."
 
 EXAMPLE — user says "scan my network":
-Step 1: {{"action": "terminal_exec", "args": {{"command": "sudo nmap -sn 192.168.1.0/24"}}, "confirmed": true}}
-(Result: "Action requires explicit user confirmation" OR "INTERACTIVE_PROMPT_NEEDED: Password:")
-Step 2 (if confirmation needed): {{"action": "reply", "content": "I need permission to run sudo nmap..."}}
-Step 3 (if password needed): {{"action": "reply", "content": "I need sudo password."}}
-Step 4 (once known): {{"action": "terminal_type", "args": {{"text": "secret123"}}}}
+Step 1: Check IP first if untrusted.
+Step 2: {{"action": "network_scan", "args": {{"target": "YOUR_SUBNET/24", "ports": "top-100"}}, "confirmed": false}}
+(Result: "Action requires explicit user confirmation")
+Step 3: {{"action": "reply", "content": "I can scan 192.168.x.0/24. Proceed?"}}
 
 ONLY output a single JSON object. No text, no markdown, no explanation."""

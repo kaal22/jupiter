@@ -10,9 +10,9 @@ This script installs everything (Python dependencies, Ollama AI, LLM Model, and 
 
 ```bash
 # 1. Get Code
-git clone https://github.com/kaal22/jupiter.git ~/.local/share/jupiter
-cd ~/.local/share/jupiter
-git pull origin main
+cd ~
+git clone https://github.com/kaal22/jupiter.git
+cd jupiter
 
 # 2. Run Installer
 chmod +x install.sh
@@ -99,7 +99,7 @@ jupiter "check system status and tail the last 20 auth logs"
 Run the installer again to pull the latest code and dependencies:
 
 ```bash
-cd ~/.local/share/jupiter
+cd ~/jupiter
 git pull
 ./install.sh
 ```
